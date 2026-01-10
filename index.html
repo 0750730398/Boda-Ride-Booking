@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -15,22 +15,35 @@ header {
     color: white; text-align: center;
     padding: 20px;
 }
-header h1 { margin: 0; font-size: 1.5rem; }
-header p { font-size: 0.9rem; opacity: 0.9; }
+header h1 { margin: 0; font-size: 1.8rem; }
+header p { font-size: 1rem; opacity: 0.9; }
 
 nav { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
-nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #0f766e; color:white; cursor:pointer; }
+nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #0f766e; color:white; cursor:pointer; transition:0.3s; }
 nav button:hover { background: #115e59; }
 
-.container { max-width: 500px; margin: auto; padding: 20px; }
-.card { background:white; padding:18px; border-radius:12px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.05); }
-.card h2 { color:#0f766e; margin-bottom:12px; }
-input, select { width:100%; padding:10px; margin-bottom:12px; border-radius:8px; border:1px solid #d1d5db; font-size:0.9rem; }
-button.submit { width:100%; padding:12px; border:none; border-radius:10px; background:#0f766e; color:white; font-weight:600; cursor:pointer; }
+.container { max-width: 550px; margin: auto; padding: 20px; }
+.card { background:white; padding:25px; border-radius:15px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.05); }
+.card h2 { color:#0f766e; margin-bottom:15px; font-size:1.4rem; }
+input, select, textarea { width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid #d1d5db; font-size:1rem; }
+button.submit { width:100%; padding:15px; border:none; border-radius:12px; background:#0f766e; color:white; font-weight:600; font-size:1rem; cursor:pointer; transition:0.3s; }
 button.submit:hover { background:#115e59; }
-.booking, .rider { border:1px solid #d1d5db; padding:10px; border-radius:8px; margin-bottom:10px; background:#f3f4f6; }
+.booking, .rider { border:1px solid #d1d5db; padding:12px; border-radius:10px; margin-bottom:12px; background:#f3f4f6; }
 
-footer { text-align:center; font-size:0.8rem; padding:15px; color:#6b7280; }
+footer { text-align:center; font-size:0.9rem; padding:15px; color:#6b7280; }
+
+/* Success popup */
+#successMsg {
+    display:none;
+    position:fixed;
+    top:20px; left:50%;
+    transform:translateX(-50%);
+    background:#0f766e;
+    color:white; padding:15px 25px;
+    border-radius:12px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+    z-index:1000;
+}
 </style>
 </head>
 <body>
@@ -51,18 +64,37 @@ footer { text-align:center; font-size:0.8rem; padding:15px; color:#6b7280; }
 <!-- Booking Form -->
 <div id="book" class="card section">
 <h2>Book a Ride</h2>
-<label>Pickup Location</label>
-<input type="text" id="pickup" placeholder="e.g. Jinja Main Street">
-<label>Destination</label>
-<input type="text" id="destination" placeholder="e.g. Bugembe">
-<label>Ride Time</label>
-<select id="time">
-<option>Now</option>
-<option>In 15 minutes</option>
-<option>In 30 minutes</option>
-<option>Schedule Later</option>
-</select>
-<button class="submit" onclick="bookRide()">Book Ride</button>
+<form id="bookingForm" action="https://formsubmit.co/augustinenta.kiiza@gmail.com" method="POST" target="_blank">
+    <!-- FormSubmit hidden inputs -->
+    <input type="hidden" name="_subject" value="New Boda Ride Booking">
+    <input type="hidden" name="_captcha" value="false">
+
+    <label>Full Name</label>
+    <input type="text" name="name" placeholder="Your Full Name" required>
+
+    <label>Phone Number</label>
+    <input type="tel" name="phone" placeholder="e.g. 07XXXXXXXX" required>
+
+    <label>Pickup Location</label>
+    <input type="text" name="pickup" placeholder="e.g. Jinja Main Street" required>
+
+    <label>Destination</label>
+    <input type="text" name="destination" placeholder="e.g. Bugembe" required>
+
+    <label>Ride Time</label>
+    <select name="time" required>
+        <option>Now</option>
+        <option>In 15 minutes</option>
+        <option>In 30 minutes</option>
+        <option>Schedule Later</option>
+    </select>
+
+    <!-- Optional message -->
+    <label>Additional Notes</label>
+    <textarea name="notes" placeholder="Any notes for the rider"></textarea>
+
+    <button type="submit" class="submit">Book Ride</button>
+</form>
 </div>
 
 <!-- Add Rider -->
@@ -89,6 +121,9 @@ footer { text-align:center; font-size:0.8rem; padding:15px; color:#6b7280; }
 </div>
 
 <footer>© 2026 Jinja Boda Boda Riders • Ride With Purpose</footer>
+
+<!-- Success popup -->
+<div id="successMsg">Booking sent! WhatsApp message ready.</div>
 
 <script>
 // Show sections
@@ -121,22 +156,6 @@ function addRider(){
     },()=>alert('Could not get location'));
 }
 
-// Book Ride
-function bookRide(){
-    const pickup = document.getElementById('pickup').value;
-    const destination = document.getElementById('destination').value;
-    const time = document.getElementById('time').value;
-    const riders = getRiders();
-    if(riders.length===0){ alert('No riders available!'); return; }
-    const assignedRider = riders[Math.floor(Math.random()*riders.length)];
-    const bookings = getBookings();
-    bookings.push({ pickup, destination, time, rider:assignedRider });
-    localStorage.setItem('bookings', JSON.stringify(bookings));
-    alert(`Ride booked! Rider: ${assignedRider.name}, Phone: ${assignedRider.phone}`);
-    document.getElementById('pickup').value='';
-    document.getElementById('destination').value='';
-}
-
 // Admin Dashboard
 function loadAdmin(){
     const riders = getRiders();
@@ -146,6 +165,35 @@ function loadAdmin(){
     riderList.innerHTML = riders.map(r=>`<div class="rider">${r.name} | ${r.phone} | ${r.vehicle} | Lat:${r.location.lat.toFixed(4)} Lng:${r.location.lng.toFixed(4)}</div>`).join('');
     bookingList.innerHTML = bookings.map(b=>`<div class="booking">Rider: ${b.rider.name} | Pickup: ${b.pickup} | Destination: ${b.destination} | Time: ${b.time}</div>`).join('');
 }
+
+// WhatsApp auto message & success popup
+document.getElementById('bookingForm').addEventListener('submit', function(e){
+    e.preventDefault(); // prevent default submit to show WhatsApp first
+
+    // Get form values
+    const form = e.target;
+    const name = form.name.value;
+    const phone = form.phone.value;
+    const pickup = form.pickup.value;
+    const destination = form.destination.value;
+    const time = form.time.value;
+
+    // Send form to FormSubmit
+    form.submit();
+
+    // WhatsApp message
+    const message = `Hello! I just booked a ride.\nName: ${name}\nPhone: ${phone}\nPickup: ${pickup}\nDestination: ${destination}\nTime: ${time}`;
+    const whatsappLink = `https://wa.me/0750730398?text=${encodeURIComponent(message)}`;
+    window.open(whatsappLink, '_blank');
+
+    // Show success popup
+    const popup = document.getElementById('successMsg');
+    popup.style.display='block';
+    setTimeout(()=>popup.style.display='none', 4000);
+
+    // Clear form
+    form.reset();
+});
 
 // Show booking section by default
 showSection('book');
