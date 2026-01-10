@@ -215,13 +215,19 @@ function loadAdminRiders(){
     `).join('') || "<p>No riders registered</p>";
 }
 
-// === DELETE RIDER ===
+// === DELETE RIDER (FIXED) ===
 function deleteRider(plate){
     if(!confirm("Are you sure you want to delete this rider?")) return;
 
     let riders = getRiders();
-    riders = riders.filter(r => !(r.bike && r.bike.trim().toLowerCase()===plate.toLowerCase()));
-    
+
+    // Normalize bike plate for safe comparison
+    riders = riders.filter(r => {
+        const storedPlate = (r.bike || "").replace(/\s+/g,'').toLowerCase();
+        const targetPlate = (plate || "").replace(/\s+/g,'').toLowerCase();
+        return storedPlate !== targetPlate;
+    });
+
     if(currentRider && currentRider.bike && currentRider.bike.trim().toLowerCase() === plate.toLowerCase()){
         currentRider = null;
         alert("Deleted rider was logged in. Logging out now.");
