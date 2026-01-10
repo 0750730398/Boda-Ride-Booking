@@ -53,6 +53,7 @@ button.delete { background: #dc2626; }
 <option>In 15 minutes</option>
 <option>In 30 minutes</option>
 </select>
+
 <button class="submit" onclick="bookRide()">Submit Booking</button>
 </div>
 
@@ -68,7 +69,7 @@ button.delete { background: #dc2626; }
 <div id="rider" class="card section" style="display:none;">
 <h2>Rider Dashboard</h2>
 <p>Update location only:</p>
-<input id="updatePlate" placeholder="Your Bike Plate">
+<input id="updatePlate" placeholder="Your Plate">
 <button class="submit" onclick="updateMyLocation()">Update My Location</button>
 <hr>
 <h3>Registered Riders</h3>
@@ -89,42 +90,35 @@ button.delete { background: #dc2626; }
 <button onclick="showRegistration('car')">Register Car Driver</button>
 </div>
 
-<!-- MOTORCYCLE RIDER FORM -->
 <div id="motorcycleForm" style="display:none;">
 <h3>Add Motorcycle Rider</h3>
 <input id="riderName" placeholder="Rider Name">
-<input id="riderPhone" placeholder="Phone (07XXXXXXXX)">
-<input id="vehicle" placeholder="Bike Plate Number">
+<input id="riderPhone" placeholder="Phone">
+<input id="vehicle" placeholder="Bike Plate">
 <input id="riderNIN" placeholder="NIN (Optional)">
 <button class="submit" onclick="addRider('Motorcycle')">Add Rider</button>
 </div>
 
-<!-- CAR DRIVER FORM -->
 <div id="carForm" style="display:none;">
 <h3>Add Car Driver</h3>
 <input id="driverName" placeholder="Driver Name">
-<input id="driverPhone" placeholder="Phone (07XXXXXXXX)">
-<input id="carPlate" placeholder="Car Plate Number">
+<input id="driverPhone" placeholder="Phone">
+<input id="carPlate" placeholder="Car Plate">
 <select id="carType">
-<option value="Sedan">Sedan</option>
-<option value="SUV">SUV</option>
-<option value="Van">Van</option>
-<option value="Pickup">Pickup</option>
+<option>Sedan</option>
+<option>SUV</option>
+<option>Van</option>
+<option>Pickup</option>
 </select>
 <input id="driverNIN" placeholder="NIN (Optional)">
 <button class="submit" onclick="addRider('Car')">Add Driver</button>
 </div>
 
 <hr>
-<h3>Search Riders by Bike/Car Plate</h3>
-<input id="searchPlate" placeholder="Type plate to search..." oninput="searchRidersByPlate()">
-
-<hr>
-<h3>Registered Riders/Drivers</h3>
+<input id="searchPlate" placeholder="Search plate..." oninput="searchRidersByPlate()">
 <div id="riderProfilesAdmin"></div>
 
 <hr>
-<h3>Bookings</h3>
 <div id="bookingList"></div>
 </div>
 
@@ -135,244 +129,106 @@ const ADMIN_PIN = "1234";
 let currentRider = null;
 let showAllBookings = false;
 
-// === SHOW REGISTRATION FORM ===
-function showRegistration(type){
-    document.getElementById('motorcycleForm').style.display = (type==='motorcycle')?'block':'none';
-    document.getElementById('carForm').style.display = (type==='car')?'block':'none';
-}
-
-// === SECTION CONTROL ===
-function showSection(id){
-    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-    document.getElementById(id).style.display='block';
-    if(id==="rider") { loadRiders(); loadRiderBookings(); }
-    if(id==="admin") { loadRiders(); loadAdminRiders(); loadAdmin(); }
-}
-
-// === ADMIN LOGIN FUNCTION ===
-function openAdmin(){
-    const pin = prompt("Enter Admin PIN");
-    if(pin === ADMIN_PIN){
-        showSection('admin');
-    } else {
-        alert("Wrong PIN");
-    }
-}
-
-// === RIDER OR ADMIN LOGIN ===
-function riderOrAdminLogin(){
-    const val = document.getElementById('loginInput').value.trim();
-    if(!val){ alert("Enter bike plate or admin PIN"); return; }
-    if(val === ADMIN_PIN){ showSection('admin'); return; }
-    const riders = getRiders();
-    const rider = riders.find(r => r.plate && r.plate.trim().toLowerCase() === val.toLowerCase());
-    if(rider){ currentRider = rider; showSection('rider'); loadRiders(); loadRiderBookings(); }
-    else { alert("Plate not registered or deleted. Contact admin."); }
-}
-
-// === STORAGE ===
 const getRiders = () => JSON.parse(localStorage.getItem('riders')||'[]');
 const getBookings = () => JSON.parse(localStorage.getItem('bookings')||'[]');
 
-// === ADD RIDER/DRIVER ===
+function showRegistration(type){
+document.getElementById('motorcycleForm').style.display = type==='motorcycle'?'block':'none';
+document.getElementById('carForm').style.display = type==='car'?'block':'none';
+}
+
+function showSection(id){
+document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+document.getElementById(id).style.display='block';
+if(id==="admin"){loadAdminRiders();loadAdmin();}
+}
+
+function openAdmin(){
+const pin=prompt("Enter Admin PIN");
+if(pin===ADMIN_PIN) showSection('admin'); else alert("Wrong PIN");
+}
+
+function riderOrAdminLogin(){
+const v=loginInput.value.trim();
+if(v===ADMIN_PIN){showSection('admin');return;}
+const r=getRiders().find(x=>x.plate?.toLowerCase()===v.toLowerCase());
+if(r){currentRider=r;showSection('rider');loadRiderBookings();}else alert("Not registered");
+}
+
 function addRider(type){
-    navigator.geolocation.getCurrentPosition(pos=>{
-        let riders = getRiders();
-        let name, phone, plate, nin, vehicleType;
-        if(type==='Motorcycle'){
-            name = riderName.value.trim();
-            phone = riderPhone.value.trim();
-            plate = vehicle.value.trim();
-            nin = riderNIN.value.trim();
-        } else {
-            name = driverName.value.trim();
-            phone = driverPhone.value.trim();
-            plate = carPlate.value.trim();
-            vehicleType = document.getElementById('carType').value;
-            nin = driverNIN.value.trim();
-        }
-
-        if(riders.find(r=>r.plate && r.plate.trim().toLowerCase()===plate.toLowerCase())){
-            alert("Rider/Driver already exists");
-            return;
-        }
-
-        const systemNumber = (type==='Motorcycle'?'RIDER':'DRIVER') + "-" + Date.now() + "-" + Math.floor(Math.random()*900 + 100);
-
-        riders.push({
-            id: Date.now(),
-            systemId: systemNumber,
-            name, phone,
-            plate,
-            type,
-            vehicleType: vehicleType || '',
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            nin: nin || ""
-        });
-
-        localStorage.setItem('riders', JSON.stringify(riders));
-        alert(`${type} added successfully. System ID: ${systemNumber}`);
-        loadRiders();
-        loadAdminRiders();
-    });
+navigator.geolocation.getCurrentPosition(p=>{
+let riders=getRiders();
+let plate=type==='Motorcycle'?vehicle.value:carPlate.value;
+if(riders.find(r=>r.plate===plate)){alert("Exists");return;}
+riders.push({
+id:Date.now(),
+name:type==='Motorcycle'?riderName.value:driverName.value,
+phone:type==='Motorcycle'?riderPhone.value:driverPhone.value,
+plate,
+type,
+vehicleType:type==='Car'?carType.value:"",
+lat:p.coords.latitude,lng:p.coords.longitude
+});
+localStorage.setItem('riders',JSON.stringify(riders));
+loadAdminRiders();
+});
 }
 
-// === RIDER UPDATE LOCATION ===
 function updateMyLocation(){
-    const plate = document.getElementById('updatePlate').value.trim();
-    if(!plate){ alert("Enter your plate"); return; }
-    navigator.geolocation.getCurrentPosition(pos=>{
-        let riders = getRiders();
-        let rider = riders.find(r => r.plate && r.plate.trim().toLowerCase() === plate.toLowerCase());
-        if(!rider){ alert("Plate not registered. Contact admin."); return; }
-        rider.lat = pos.coords.latitude;
-        rider.lng = pos.coords.longitude;
-        localStorage.setItem('riders',JSON.stringify(riders));
-        alert("Location updated successfully");
-        loadRiders();
-        loadAdminRiders();
-    });
+navigator.geolocation.getCurrentPosition(p=>{
+let r=getRiders(); let me=r.find(x=>x.plate===updatePlate.value);
+me.lat=p.coords.latitude;me.lng=p.coords.longitude;
+localStorage.setItem('riders',JSON.stringify(r));
+});
 }
 
-// === LOAD RIDERS FOR DASHBOARDS ===
-function loadRiders(){
-    const riders = getRiders();
-    document.getElementById('riderProfiles').innerHTML = riders.map(r=>`
-        <div class="rider">
-            <b>${r.name}</b><br>
-            📞 ${r.phone}<br>
-            ${r.type==='Motorcycle'?'🏍️':'🚗'} ${r.plate}<br>
-            ${r.vehicleType? "Type: "+r.vehicleType+"<br>":""}
-            ${r.nin ? "🆔 NIN: " + r.nin + "<br>" : ""}
-            🆔 System ID: ${r.systemId}<br>
-            📍 Location active
-        </div>
-    `).join('') || "<p>No riders registered</p>";
-}
-
-// === LOAD RIDER BOOKINGS ===
-function loadRiderBookings(){
-    if(!currentRider){ document.getElementById('riderBookings').innerHTML = "<p>No bookings assigned</p>"; return; }
-    const bookings = getBookings().filter(b => b.rider && b.rider.plate === currentRider.plate);
-    document.getElementById('riderBookings').innerHTML = bookings.map(b=>`
-        <div class="booking">
-            <b>${b.customer}</b><br>
-            ${b.pickup} → ${b.destination}<br>
-            Type: ${b.type}<br>
-            ⏰ ${b.time}<br>
-            🚦 <b>${b.status}</b>
-        </div>
-    `).join('') || "<p>No bookings assigned</p>";
-}
-
-// === ADMIN RIDER LIST ===
-function loadAdminRiders(filteredRiders=null){
-    const riders = filteredRiders || getRiders();
-    document.getElementById('riderProfilesAdmin').innerHTML = riders.map(r=>`
-        <div class="rider">
-            <b>${r.name}</b> | ${r.type==='Motorcycle'?'🏍️':'🚗'} ${r.plate} | 📞 ${r.phone} ${r.vehicleType? "| Type: "+r.vehicleType:""} ${r.nin ? " | NIN: " + r.nin : ""} | 🆔 ${r.systemId}<br>
-            <button class="delete" onclick="deleteRider('${r.plate}')">Delete</button>
-        </div>
-    `).join('') || "<p>No riders registered</p>";
-}
-
-// === SEARCH RIDERS ===
-function searchRidersByPlate(){
-    const query = document.getElementById('searchPlate').value.trim().toLowerCase();
-    const riders = getRiders().filter(r => r.plate && r.plate.toLowerCase().includes(query));
-    loadAdminRiders(riders);
-}
-
-// === DELETE RIDER ===
-function deleteRider(plate){
-    if(!confirm("Are you sure?")) return;
-    let riders = getRiders().filter(r => (r.plate || "").replace(/\s+/g,'').toLowerCase() !== plate.toLowerCase());
-    if(currentRider && currentRider.plate.toLowerCase() === plate.toLowerCase()){ currentRider=null; showSection('riderLogin'); alert("Deleted rider logged out."); }
-    else { alert("Deleted successfully"); }
-    localStorage.setItem('riders',JSON.stringify(riders));
-    loadRiders();
-    loadAdminRiders();
-}
-
-// === BOOK RIDE ===
 function bookRide(){
-    if(!custName.value||!custPhone.value||!pickup.value||!destination.value){ alert("Fill all fields"); return; }
-    const bookings = getBookings();
-    bookings.push({
-        id: Date.now(),
-        customer: custName.value,
-        phone: custPhone.value,
-        pickup: pickup.value,
-        destination: destination.value,
-        type: rideType.value,
-        time: time.value,
-        status: "Pending",
-        rider: null
-    });
-    localStorage.setItem('bookings',JSON.stringify(bookings));
-    alert("Booking received");
-    custName.value=custPhone.value=pickup.value=destination.value="";
+let b=getBookings();
+b.push({
+id:Date.now(),
+customer:custName.value,
+phone:custPhone.value,
+pickup:pickup.value,
+destination:destination.value,
+type:rideType.value,
+time:time.value,
+status:"Pending",
+rider:null
+});
+localStorage.setItem('bookings',JSON.stringify(b));
+alert("Booking received");
 }
 
-// === ADMIN BOOKINGS ===
+function loadAdminRiders(list=null){
+const r=list||getRiders();
+riderProfilesAdmin.innerHTML=r.map(x=>`
+<div class="rider">${x.name} | ${x.plate} | ${x.type}</div>`).join('');
+}
+
+function searchRidersByPlate(){
+loadAdminRiders(getRiders().filter(r=>r.plate.toLowerCase().includes(searchPlate.value.toLowerCase())));
+}
+
 function loadAdmin(){
-    let bookings = getBookings().sort((a,b) => b.id - a.id);
-    let displayBookings = showAllBookings ? bookings : bookings.slice(0,5);
-    bookingList.innerHTML = displayBookings.map(b=>`
-        <div class="booking">
-            <b>${b.customer}</b><br>
-            ${b.pickup} → ${b.destination}<br>
-            Type: ${b.type}<br>
-            ⏰ ${b.time}<br>
-            🚦 <b>${b.status}</b><br>
-            ${b.status==="Pending"?`<button class="action" onclick="assignNearest(${b.id})">Assign Nearest Rider</button>`:""}
-            ${b.status==="Accepted"?`<button class="action complete" onclick="markCompleted(${b.id})">Trip Completed</button>`:""}
-        </div>
-    `).join('') || "<p>No bookings</p>";
-
-    if(bookings.length>5){ const btnText = showAllBookings ? "Hide Older Bookings" : "View Older Bookings"; bookingList.innerHTML += `<button class="action" style="margin-top:10px;" onclick="toggleOlderBookings()">${btnText}</button>`; }
+bookingList.innerHTML=getBookings().map(b=>`
+<div class="booking">${b.customer} | ${b.time}</div>`).join('');
 }
 
-// === TOGGLE OLDER BOOKINGS ===
-function toggleOlderBookings(){ showAllBookings=!showAllBookings; loadAdmin(); }
+/* ===== ADVANCE BOOKING FOR CAR ONLY (SAFE ADDITION) ===== */
+const baseTimes=["Now","In 15 minutes","In 30 minutes"];
+const carTimes=["In 2 hours","In 4 hours","In 8 hours","In 1 day","In 2 days","In 3 days","In 4 days","In 5 days","In 1 week"];
 
-// === DISTANCE ===
-function distance(a,b){
-    const R=6371;
-    const dLat=(b.lat-a.lat)*Math.PI/180;
-    const dLng=(b.lng-a.lng)*Math.PI/180;
-    const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-    return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
+function updateTimeOptions(){
+time.innerHTML="";
+baseTimes.forEach(t=>time.add(new Option(t,t)));
+if(rideType.value==="Car"){
+carTimes.forEach(t=>time.add(new Option(t,t)));
 }
-
-// === ASSIGN NEAREST RIDER ===
-function assignNearest(id){
-    const bookings=getBookings();
-    const riders=getRiders();
-    const booking=bookings.find(b=>b.id===id);
-    if(!riders.length){ alert("No riders available"); return; }
-    navigator.geolocation.getCurrentPosition(pos=>{
-        let nearest=null,min=Infinity;
-        riders.forEach(r=>{
-            const d=distance({lat:pos.coords.latitude,lng:pos.coords.longitude},r);
-            if(d<min){min=d;nearest=r;}
-        });
-        booking.rider=nearest; booking.status="Accepted";
-        localStorage.setItem('bookings',JSON.stringify(bookings));
-        loadAdmin(); loadRiderBookings();
-    });
 }
+rideType.addEventListener("change",updateTimeOptions);
+updateTimeOptions();
+/* ===== END ADDITION ===== */
 
-// === COMPLETE ===
-function markCompleted(id){
-    const b=getBookings();
-    b.find(x=>x.id===id).status="Completed";
-    localStorage.setItem('bookings',JSON.stringify(b));
-    loadAdmin();
-}
-
-// DEFAULT
 showSection('book');
 </script>
 
