@@ -76,7 +76,12 @@ button.delete { background: #dc2626; }
 <input id="riderName" placeholder="Rider Name">
 <input id="riderPhone" placeholder="Phone (07XXXXXXXX)">
 <input id="vehicle" placeholder="Bike Plate Number">
+<input id="riderNIN" placeholder="NIN (Optional)">
 <button class="submit" onclick="addRider()">Add Rider</button>
+
+<hr>
+<h3>Search Riders by Bike Plate</h3>
+<input id="searchPlate" placeholder="Type bike plate to search..." oninput="searchRidersByPlate()">
 
 <hr>
 <h3>Registered Riders</h3>
@@ -139,29 +144,35 @@ function riderOrAdminLogin(){
 const getRiders = () => JSON.parse(localStorage.getItem('riders')||'[]');
 const getBookings = () => JSON.parse(localStorage.getItem('bookings')||'[]');
 
-// === ADMIN ADD RIDER ===
+// === ADMIN ADD RIDER (with auto-generated system number) ===
 function addRider(){
     navigator.geolocation.getCurrentPosition(pos=>{
         let riders = getRiders();
         const bikePlate = vehicle.value.trim();
         const phoneNum = riderPhone.value.trim();
+        const ninNum = riderNIN.value.trim();
 
         if(riders.find(r=>r.bike && r.bike.trim().toLowerCase()===bikePlate.toLowerCase())){
             alert("Rider already exists");
             return;
         }
 
+        // auto-generate a system number
+        const systemNumber = "RIDER-" + Date.now() + "-" + Math.floor(Math.random()*900 + 100);
+
         riders.push({
             id: Date.now(),
+            systemId: systemNumber, // new auto-generated number
             name: riderName.value.trim(),
             phone: phoneNum,
             bike: bikePlate,
             lat: pos.coords.latitude,
-            lng: pos.coords.longitude
+            lng: pos.coords.longitude,
+            nin: ninNum || ""
         });
 
         localStorage.setItem('riders',JSON.stringify(riders));
-        alert("Rider added successfully");
+        alert("Rider added successfully. System ID: " + systemNumber);
         loadRiders();
         loadAdminRiders();
     });
@@ -199,34 +210,37 @@ function loadRiders(){
             <b>${r.name}</b><br>
             📞 ${r.phone}<br>
             🏍️ ${r.bike}<br>
+            ${r.nin ? "🆔 NIN: " + r.nin + "<br>" : ""}
+            🆔 System ID: ${r.systemId}<br>
             📍 Location active
         </div>
     `).join('') || "<p>No riders registered</p>";
 }
 
 // === LOAD RIDERS FOR ADMIN DASHBOARD ===
-function loadAdminRiders(){
-    const riders = getRiders();
+function loadAdminRiders(filteredRiders=null){
+    const riders = filteredRiders || getRiders();
     document.getElementById('riderProfilesAdmin').innerHTML = riders.map(r=>`
         <div class="rider">
-            <b>${r.name}</b> | 🏍️ ${r.bike} | 📞 ${r.phone}<br>
+            <b>${r.name}</b> | 🏍️ ${r.bike} | 📞 ${r.phone}${r.nin ? " | NIN: " + r.nin : ""} | 🆔 ${r.systemId}<br>
             <button class="delete" onclick="deleteRider('${r.bike}')">Delete Rider</button>
         </div>
     `).join('') || "<p>No riders registered</p>";
 }
 
-// === DELETE RIDER (FIXED) ===
+// === SEARCH BY NUMBER PLATE ===
+function searchRidersByPlate(){
+    const query = document.getElementById('searchPlate').value.trim().toLowerCase();
+    const riders = getRiders().filter(r => r.bike && r.bike.toLowerCase().includes(query));
+    loadAdminRiders(riders);
+}
+
+// === DELETE RIDER ===
 function deleteRider(plate){
     if(!confirm("Are you sure you want to delete this rider?")) return;
 
     let riders = getRiders();
-
-    // Normalize bike plate for safe comparison
-    riders = riders.filter(r => {
-        const storedPlate = (r.bike || "").replace(/\s+/g,'').toLowerCase();
-        const targetPlate = (plate || "").replace(/\s+/g,'').toLowerCase();
-        return storedPlate !== targetPlate;
-    });
+    riders = riders.filter(r => (r.bike || "").replace(/\s+/g,'').toLowerCase() !== (plate || "").replace(/\s+/g,'').toLowerCase());
 
     if(currentRider && currentRider.bike && currentRider.bike.trim().toLowerCase() === plate.toLowerCase()){
         currentRider = null;
