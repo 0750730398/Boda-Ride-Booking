@@ -6,69 +6,16 @@
 <title>Jinja Boda Boda Booking App</title>
 
 <style>
-body {
-    font-family: "Segoe UI", sans-serif;
-    background: #f9fafb;
-    margin: 0;
-}
-header {
-    background: linear-gradient(135deg, #0f766e, #14b8a6);
-    color: white;
-    text-align: center;
-    padding: 20px;
-}
-nav {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 10px 0;
-}
-nav button {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 8px;
-    background: #0f766e;
-    color: white;
-    cursor: pointer;
-}
-.container {
-    max-width: 550px;
-    margin: auto;
-    padding: 20px;
-}
-.card {
-    background: white;
-    padding: 25px;
-    border-radius: 15px;
-    margin-bottom: 20px;
-}
-input, select {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    border: 1px solid #d1d5db;
-}
-button.submit, button.action {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 12px;
-    background: #0f766e;
-    color: white;
-    font-weight: bold;
-    margin-top: 5px;
-    cursor: pointer;
-}
+body { font-family: "Segoe UI", sans-serif; background: #f9fafb; margin: 0; }
+header { background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; text-align: center; padding: 20px; }
+nav { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
+nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #0f766e; color: white; cursor: pointer; }
+.container { max-width: 550px; margin: auto; padding: 20px; }
+.card { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
+input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #d1d5db; }
+button.submit, button.action { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #0f766e; color: white; font-weight: bold; margin-top: 5px; cursor: pointer; }
 button.delete { background: #dc2626; }
-
-.booking, .rider {
-    background: #f3f4f6;
-    padding: 12px;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #d1d5db;
-}
+.booking, .rider { background: #f3f4f6; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #d1d5db; }
 </style>
 </head>
 
@@ -146,7 +93,7 @@ button.delete { background: #dc2626; }
 const ADMIN_PIN = "1234";
 let currentRider = null;
 
-// SECTION CONTROL
+// === SECTION CONTROL ===
 function showSection(id){
     document.querySelectorAll('.section').forEach(s=>s.style.display='none');
     document.getElementById(id).style.display='block';
@@ -154,18 +101,26 @@ function showSection(id){
     if(id==="admin") { loadRiders(); loadAdminRiders(); loadAdmin(); }
 }
 
-// LOGIN FOR RIDER / ADMIN
+// === ADMIN LOGIN FUNCTION ===
+function openAdmin(){
+    const pin = prompt("Enter Admin PIN");
+    if(pin === ADMIN_PIN){
+        showSection('admin');
+    } else {
+        alert("Wrong PIN");
+    }
+}
+
+// === RIDER OR ADMIN LOGIN ===
 function riderOrAdminLogin(){
     const val = document.getElementById('loginInput').value.trim();
     if(!val){ alert("Enter bike plate or admin PIN"); return; }
 
-    // Admin login
     if(val === ADMIN_PIN){
         showSection('admin');
         return;
     }
 
-    // Rider login
     const riders = getRiders();
     const rider = riders.find(r => r.bike && r.bike.trim().toLowerCase() === val.toLowerCase());
 
@@ -179,11 +134,11 @@ function riderOrAdminLogin(){
     }
 }
 
-// STORAGE
+// === STORAGE ===
 const getRiders = () => JSON.parse(localStorage.getItem('riders')||'[]');
 const getBookings = () => JSON.parse(localStorage.getItem('bookings')||'[]');
 
-// ADMIN ADD RIDER
+// === ADMIN ADD RIDER ===
 function addRider(){
     navigator.geolocation.getCurrentPosition(pos=>{
         let riders = getRiders();
@@ -211,7 +166,7 @@ function addRider(){
     });
 }
 
-// RIDER UPDATE LOCATION ONLY
+// === RIDER UPDATE LOCATION ===
 function updateMyLocation(){
     const plate = document.getElementById('updatePlate').value.trim();
     if(!plate){ alert("Enter your bike plate"); return; }
@@ -235,7 +190,7 @@ function updateMyLocation(){
     });
 }
 
-// LOAD RIDERS FOR RIDER DASHBOARD
+// === LOAD RIDERS FOR RIDER DASHBOARD ===
 function loadRiders(){
     const riders = getRiders();
     document.getElementById('riderProfiles').innerHTML = riders.map(r=>`
@@ -248,7 +203,7 @@ function loadRiders(){
     `).join('') || "<p>No riders registered</p>";
 }
 
-// LOAD RIDERS FOR ADMIN DASHBOARD
+// === LOAD RIDERS FOR ADMIN DASHBOARD ===
 function loadAdminRiders(){
     const riders = getRiders();
     document.getElementById('riderProfilesAdmin').innerHTML = riders.map(r=>`
@@ -259,19 +214,28 @@ function loadAdminRiders(){
     `).join('') || "<p>No riders registered</p>";
 }
 
-// DELETE RIDER (ADMIN ONLY)
+// === DELETE RIDER ===
 function deleteRider(plate){
     if(!confirm("Are you sure you want to delete this rider?")) return;
 
     let riders = getRiders();
     riders = riders.filter(r => !(r.bike && r.bike.trim().toLowerCase()===plate.toLowerCase()));
     localStorage.setItem('riders',JSON.stringify(riders));
-    alert("Rider deleted successfully");
+    
+    // Log out the rider if they are currently logged in
+    if(currentRider && currentRider.bike && currentRider.bike.trim().toLowerCase() === plate.toLowerCase()){
+        currentRider = null;
+        alert("Deleted rider was logged in. Logging out now.");
+        showSection('riderLogin');
+    } else {
+        alert("Rider deleted successfully");
+    }
+
     loadRiders();
     loadAdminRiders();
 }
 
-// BOOK RIDE
+// === BOOK RIDE ===
 function bookRide(){
     if(!custName.value||!custPhone.value||!pickup.value||!destination.value){
         alert("Fill all booking details"); return;
@@ -292,7 +256,7 @@ function bookRide(){
     custName.value=custPhone.value=pickup.value=destination.value="";
 }
 
-// ADMIN BOOKINGS
+// === ADMIN BOOKINGS ===
 function loadAdmin(){
     const bookings = getBookings();
     bookingList.innerHTML = bookings.map(b=>`
@@ -313,7 +277,7 @@ function loadAdmin(){
     `).join('') || "<p>No bookings</p>";
 }
 
-// DISTANCE
+// === DISTANCE ===
 function distance(a,b){
     const R=6371;
     const dLat=(b.lat-a.lat)*Math.PI/180;
@@ -324,7 +288,7 @@ function distance(a,b){
     return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
 }
 
-// ASSIGN NEAREST RIDER
+// === ASSIGN NEAREST RIDER ===
 function assignNearest(id){
     const bookings=getBookings();
     const riders=getRiders();
@@ -339,13 +303,13 @@ function assignNearest(id){
         });
 
         booking.rider = nearest;
-        booking.status = "Accepted"; // Rider auto-accept simplified
+        booking.status = "Accepted";
         localStorage.setItem('bookings',JSON.stringify(bookings));
         loadAdmin();
     });
 }
 
-// COMPLETE
+// === COMPLETE ===
 function markCompleted(id){
     const b=getBookings();
     b.find(x=>x.id===id).status="Completed";
