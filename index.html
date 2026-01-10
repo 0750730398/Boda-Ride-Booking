@@ -92,6 +92,7 @@ button.delete { background: #dc2626; }
 <script>
 const ADMIN_PIN = "1234";
 let currentRider = null;
+let showAllBookings = false; // toggle for older bookings
 
 // === SECTION CONTROL ===
 function showSection(id){
@@ -220,9 +221,7 @@ function deleteRider(plate){
 
     let riders = getRiders();
     riders = riders.filter(r => !(r.bike && r.bike.trim().toLowerCase()===plate.toLowerCase()));
-    localStorage.setItem('riders',JSON.stringify(riders));
     
-    // Log out the rider if they are currently logged in
     if(currentRider && currentRider.bike && currentRider.bike.trim().toLowerCase() === plate.toLowerCase()){
         currentRider = null;
         alert("Deleted rider was logged in. Logging out now.");
@@ -231,6 +230,7 @@ function deleteRider(plate){
         alert("Rider deleted successfully");
     }
 
+    localStorage.setItem('riders',JSON.stringify(riders));
     loadRiders();
     loadAdminRiders();
 }
@@ -256,10 +256,12 @@ function bookRide(){
     custName.value=custPhone.value=pickup.value=destination.value="";
 }
 
-// === ADMIN BOOKINGS ===
+// === ADMIN BOOKINGS (show 5 most recent with toggle) ===
 function loadAdmin(){
-    const bookings = getBookings();
-    bookingList.innerHTML = bookings.map(b=>`
+    let bookings = getBookings().sort((a,b) => b.id - a.id);
+    let displayBookings = showAllBookings ? bookings : bookings.slice(0,5);
+
+    bookingList.innerHTML = displayBookings.map(b=>`
         <div class="booking">
             <b>${b.customer}</b><br>
             ${b.pickup} → ${b.destination}<br>
@@ -275,6 +277,17 @@ function loadAdmin(){
             Trip Completed</button>`:""}
         </div>
     `).join('') || "<p>No bookings</p>";
+
+    if(bookings.length > 5){
+        const btnText = showAllBookings ? "Hide Older Bookings" : "View Older Bookings";
+        bookingList.innerHTML += `<button class="action" style="margin-top:10px;" onclick="toggleOlderBookings()">${btnText}</button>`;
+    }
+}
+
+// === TOGGLE OLDER BOOKINGS ===
+function toggleOlderBookings(){
+    showAllBookings = !showAllBookings;
+    loadAdmin();
 }
 
 // === DISTANCE ===
