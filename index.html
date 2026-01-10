@@ -159,20 +159,23 @@ function riderOrAdminLogin(){
     const val = document.getElementById('loginInput').value.trim();
     if(!val){ alert("Enter bike plate or admin PIN"); return; }
 
+    // Admin login
     if(val === ADMIN_PIN){
         showSection('admin');
         return;
     }
 
+    // Rider login
     const riders = getRiders();
-    const rider = riders.find(r => r.bike.toLowerCase() === val.toLowerCase());
+    const rider = riders.find(r => r.bike && r.bike.trim().toLowerCase() === val.toLowerCase());
+
     if(rider){
         currentRider = rider;
         showSection('rider');
         document.getElementById('updatePlate').value = rider.bike;
         loadRiders();
     } else {
-        alert("Bike not registered. Contact admin.");
+        alert("Bike not registered or deleted. Contact admin.");
     }
 }
 
@@ -184,16 +187,19 @@ const getBookings = () => JSON.parse(localStorage.getItem('bookings')||'[]');
 function addRider(){
     navigator.geolocation.getCurrentPosition(pos=>{
         let riders = getRiders();
-        if(riders.find(r=>r.phone===riderPhone.value)){
+        const bikePlate = vehicle.value.trim();
+        const phoneNum = riderPhone.value.trim();
+
+        if(riders.find(r=>r.bike && r.bike.trim().toLowerCase()===bikePlate.toLowerCase())){
             alert("Rider already exists");
             return;
         }
 
         riders.push({
             id: Date.now(),
-            name: riderName.value,
-            phone: riderPhone.value,
-            bike: vehicle.value,
+            name: riderName.value.trim(),
+            phone: phoneNum,
+            bike: bikePlate,
             lat: pos.coords.latitude,
             lng: pos.coords.longitude
         });
@@ -212,7 +218,7 @@ function updateMyLocation(){
 
     navigator.geolocation.getCurrentPosition(pos=>{
         let riders = getRiders();
-        let rider = riders.find(r => r.bike.toLowerCase() === plate.toLowerCase());
+        let rider = riders.find(r => r.bike && r.bike.trim().toLowerCase() === plate.toLowerCase());
 
         if(!rider){
             alert("Bike not registered. Contact admin.");
@@ -258,7 +264,7 @@ function deleteRider(plate){
     if(!confirm("Are you sure you want to delete this rider?")) return;
 
     let riders = getRiders();
-    riders = riders.filter(r => r.bike.toLowerCase() !== plate.toLowerCase());
+    riders = riders.filter(r => !(r.bike && r.bike.trim().toLowerCase()===plate.toLowerCase()));
     localStorage.setItem('riders',JSON.stringify(riders));
     alert("Rider deleted successfully");
     loadRiders();
