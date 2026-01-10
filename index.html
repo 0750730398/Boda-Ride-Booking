@@ -82,7 +82,7 @@ button.complete { background:#2563eb; }
 
 <nav>
 <button onclick="showSection('book')">Book Ride</button>
-<button onclick="showSection('rider')">Riders</button>
+<button onclick="showSection('riderLogin')">Riders</button>
 <button onclick="openAdmin()">Admin</button>
 </nav>
 
@@ -103,20 +103,26 @@ button.complete { background:#2563eb; }
 <button class="submit" onclick="bookRide()">Submit Booking</button>
 </div>
 
-<!-- RIDER LOCATION UPDATE ONLY -->
+<!-- RIDER LOGIN -->
+<div id="riderLogin" class="card section" style="display:none;">
+<h2>Rider / Admin Login</h2>
+<p>Riders: enter your bike plate. Admin: enter PIN</p>
+<input id="loginInput" placeholder="Bike Plate or Admin PIN">
+<button class="submit" onclick="riderOrAdminLogin()">Login</button>
+</div>
+
+<!-- RIDER DASHBOARD -->
 <div id="rider" class="card section" style="display:none;">
-<h2>Update My Location</h2>
-<p><b>Riders only:</b> Enter your phone number and update location</p>
-
-<input id="updatePhone" placeholder="Your Phone Number (07XXXXXXXX)">
+<h2>Rider Dashboard</h2>
+<p>Update location only:</p>
+<input id="updatePlate" placeholder="Your Bike Plate">
 <button class="submit" onclick="updateMyLocation()">Update My Location</button>
-
 <hr>
 <h3>Registered Riders</h3>
 <div id="riderProfiles"></div>
 </div>
 
-<!-- ADMIN -->
+<!-- ADMIN DASHBOARD -->
 <div id="admin" class="card section" style="display:none;">
 <h2>Admin Dashboard</h2>
 
@@ -135,6 +141,7 @@ button.complete { background:#2563eb; }
 
 <script>
 const ADMIN_PIN = "1234";
+let currentRider = null;
 
 // SECTION CONTROL
 function showSection(id){
@@ -154,6 +161,28 @@ function openAdmin(){
 // STORAGE
 const getRiders = () => JSON.parse(localStorage.getItem('riders')||'[]');
 const getBookings = () => JSON.parse(localStorage.getItem('bookings')||'[]');
+
+// LOGIN FOR RIDER / ADMIN
+function riderOrAdminLogin(){
+    const val = document.getElementById('loginInput').value.trim();
+    if(!val){ alert("Enter bike plate or admin PIN"); return; }
+
+    if(val === ADMIN_PIN){
+        showSection('admin');
+        return;
+    }
+
+    const riders = getRiders();
+    const rider = riders.find(r => r.bike.toLowerCase() === val.toLowerCase());
+    if(rider){
+        currentRider = rider;
+        showSection('rider');
+        document.getElementById('updatePlate').value = rider.bike;
+        loadRiders();
+    } else {
+        alert("Bike not registered. Contact admin.");
+    }
+}
 
 // ADMIN ADD RIDER
 function addRider(){
@@ -181,15 +210,15 @@ function addRider(){
 
 // RIDER UPDATE LOCATION ONLY
 function updateMyLocation(){
-    const phone = updatePhone.value.trim();
-    if(!phone){ alert("Enter your phone number"); return; }
+    const plate = document.getElementById('updatePlate').value.trim();
+    if(!plate){ alert("Enter your bike plate"); return; }
 
     navigator.geolocation.getCurrentPosition(pos=>{
         let riders = getRiders();
-        let rider = riders.find(r=>r.phone===phone);
+        let rider = riders.find(r => r.bike.toLowerCase() === plate.toLowerCase());
 
         if(!rider){
-            alert("You are not registered. Contact admin.");
+            alert("Bike not registered. Contact admin.");
             return;
         }
 
@@ -205,7 +234,7 @@ function updateMyLocation(){
 // LOAD RIDERS
 function loadRiders(){
     const riders = getRiders();
-    riderProfiles.innerHTML = riders.map(r=>`
+    document.getElementById('riderProfiles').innerHTML = riders.map(r=>`
         <div class="rider">
             <b>${r.name}</b><br>
             📞 ${r.phone}<br>
@@ -236,18 +265,7 @@ function bookRide(){
     custName.value=custPhone.value=pickup.value=destination.value="";
 }
 
-// DISTANCE
-function distance(a,b){
-    const R=6371;
-    const dLat=(b.lat-a.lat)*Math.PI/180;
-    const dLng=(b.lng-a.lng)*Math.PI/180;
-    const s=Math.sin(dLat/2)**2+
-    Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*
-    Math.sin(dLng/2)**2;
-    return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
-}
-
-// ADMIN VIEW
+// ADMIN BOOKINGS
 function loadAdmin(){
     const bookings = getBookings();
     bookingList.innerHTML = bookings.map(b=>`
@@ -268,6 +286,17 @@ function loadAdmin(){
     `).join('') || "<p>No bookings</p>";
 }
 
+// DISTANCE
+function distance(a,b){
+    const R=6371;
+    const dLat=(b.lat-a.lat)*Math.PI/180;
+    const dLng=(b.lng-a.lng)*Math.PI/180;
+    const s=Math.sin(dLat/2)**2+
+    Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*
+    Math.sin(dLng/2)**2;
+    return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
+}
+
 // ASSIGN NEAREST RIDER
 function assignNearest(id){
     const bookings=getBookings();
@@ -282,22 +311,9 @@ function assignNearest(id){
             if(d<min){min=d;nearest=r;}
         });
 
-        booking.rider=nearest;
-        booking.status="Accepted";
+        booking.rider = nearest;
+        booking.status = "Accepted"; // Rider auto-accept simplified
         localStorage.setItem('bookings',JSON.stringify(bookings));
-
-        let phone = nearest.phone.replace(/^0/,"256");
-        const msg=`Hello ${nearest.name},
-
-You have a new boda ride.
-
-Customer: ${booking.customer}
-Phone: ${booking.phone}
-Pickup: ${booking.pickup}
-Destination: ${booking.destination}
-Time: ${booking.time}`;
-
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
         loadAdmin();
     });
 }
