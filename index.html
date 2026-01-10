@@ -88,7 +88,7 @@ button.complete { background:#2563eb; }
 
 <div class="container">
 
-<!-- BOOK RIDE -->
+<!-- BOOK -->
 <div id="book" class="card section">
 <h2>Book a Ride</h2>
 <input id="custName" placeholder="Your Name">
@@ -103,13 +103,14 @@ button.complete { background:#2563eb; }
 <button class="submit" onclick="bookRide()">Submit Booking</button>
 </div>
 
-<!-- RIDERS -->
+<!-- RIDER LOCATION UPDATE ONLY -->
 <div id="rider" class="card section" style="display:none;">
-<h2>Add / Update Rider</h2>
-<input id="riderName" placeholder="Rider Name">
-<input id="riderPhone" placeholder="Phone (07XXXXXXXX)">
-<input id="vehicle" placeholder="Bike Plate Number">
-<button class="submit" onclick="addRider()">Save & Update Location</button>
+<h2>Update My Location</h2>
+<p><b>Riders only:</b> Enter your phone number and update location</p>
+
+<input id="updatePhone" placeholder="Your Phone Number (07XXXXXXXX)">
+<button class="submit" onclick="updateMyLocation()">Update My Location</button>
+
 <hr>
 <h3>Registered Riders</h3>
 <div id="riderProfiles"></div>
@@ -118,6 +119,15 @@ button.complete { background:#2563eb; }
 <!-- ADMIN -->
 <div id="admin" class="card section" style="display:none;">
 <h2>Admin Dashboard</h2>
+
+<h3>Add Rider (Admin Only)</h3>
+<input id="riderName" placeholder="Rider Name">
+<input id="riderPhone" placeholder="Phone (07XXXXXXXX)">
+<input id="vehicle" placeholder="Bike Plate Number">
+<button class="submit" onclick="addRider()">Add Rider</button>
+
+<hr>
+<h3>Bookings</h3>
 <div id="bookingList"></div>
 </div>
 
@@ -145,30 +155,50 @@ function openAdmin(){
 const getRiders = () => JSON.parse(localStorage.getItem('riders')||'[]');
 const getBookings = () => JSON.parse(localStorage.getItem('bookings')||'[]');
 
-// ADD / UPDATE RIDER
+// ADMIN ADD RIDER
 function addRider(){
     navigator.geolocation.getCurrentPosition(pos=>{
         let riders = getRiders();
-        const name = riderName.value.trim();
-        const phone = riderPhone.value.trim();
-        const bike = vehicle.value.trim();
-        if(!name||!phone||!bike){ alert("Fill all fields"); return; }
-
-        let r = riders.find(x=>x.phone===phone);
-        if(r){
-            r.lat = pos.coords.latitude;
-            r.lng = pos.coords.longitude;
-        } else {
-            riders.push({
-                id: Date.now(),
-                name, phone, bike,
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude
-            });
+        if(riders.find(r=>r.phone===riderPhone.value)){
+            alert("Rider already exists");
+            return;
         }
+
+        riders.push({
+            id: Date.now(),
+            name: riderName.value,
+            phone: riderPhone.value,
+            bike: vehicle.value,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+        });
+
         localStorage.setItem('riders',JSON.stringify(riders));
+        alert("Rider added successfully");
         loadRiders();
-        alert("Rider saved & location updated");
+    });
+}
+
+// RIDER UPDATE LOCATION ONLY
+function updateMyLocation(){
+    const phone = updatePhone.value.trim();
+    if(!phone){ alert("Enter your phone number"); return; }
+
+    navigator.geolocation.getCurrentPosition(pos=>{
+        let riders = getRiders();
+        let rider = riders.find(r=>r.phone===phone);
+
+        if(!rider){
+            alert("You are not registered. Contact admin.");
+            return;
+        }
+
+        rider.lat = pos.coords.latitude;
+        rider.lng = pos.coords.longitude;
+
+        localStorage.setItem('riders',JSON.stringify(riders));
+        alert("Location updated successfully");
+        loadRiders();
     });
 }
 
@@ -179,25 +209,27 @@ function loadRiders(){
         <div class="rider">
             <b>${r.name}</b><br>
             📞 ${r.phone}<br>
-            🏍️ ${r.bike}
+            🏍️ ${r.bike}<br>
+            📍 Location active
         </div>
-    `).join('') || "<p>No riders yet</p>";
+    `).join('') || "<p>No riders registered</p>";
 }
 
 // BOOK RIDE
 function bookRide(){
     if(!custName.value||!custPhone.value||!pickup.value||!destination.value){
-        alert("Fill all details"); return;
+        alert("Fill all booking details"); return;
     }
     const bookings = getBookings();
     bookings.push({
         id: Date.now(),
         customer: custName.value,
         phone: custPhone.value,
-        pickup, destination,
+        pickup: pickup.value,
+        destination: destination.value,
         time: time.value,
-        status:"Pending",
-        rider:null
+        status: "Pending",
+        rider: null
     });
     localStorage.setItem('bookings',JSON.stringify(bookings));
     alert("Booking received");
@@ -223,31 +255,25 @@ function loadAdmin(){
             <b>${b.customer}</b><br>
             ${b.pickup} → ${b.destination}<br>
             ⏰ ${b.time}<br>
-            🚦 <b>${b.status}</b><br><br>
+            🚦 <b>${b.status}</b><br>
 
             ${b.status==="Pending"?`
-                <button class="action" onclick="assignNearest(${b.id})">
-                Assign Nearest Rider</button>`:""}
-
-            ${b.status==="Assigned"?`
-                <button class="action" onclick="markAccepted(${b.id})">
-                Confirm Accepted</button>
-                <button class="action reject" onclick="markRejected(${b.id})">
-                Rejected</button>`:""}
+            <button class="action" onclick="assignNearest(${b.id})">
+            Assign Nearest Rider</button>`:""}
 
             ${b.status==="Accepted"?`
-                <button class="action complete" onclick="markCompleted(${b.id})">
-                Trip Completed</button>`:""}
+            <button class="action complete" onclick="markCompleted(${b.id})">
+            Trip Completed</button>`:""}
         </div>
     `).join('') || "<p>No bookings</p>";
 }
 
-// ASSIGN RIDER + WHATSAPP
+// ASSIGN NEAREST RIDER
 function assignNearest(id){
     const bookings=getBookings();
     const riders=getRiders();
     const booking=bookings.find(b=>b.id===id);
-    if(!riders.length){ alert("No riders"); return; }
+    if(!riders.length){ alert("No riders available"); return; }
 
     navigator.geolocation.getCurrentPosition(pos=>{
         let nearest=null,min=Infinity;
@@ -257,42 +283,31 @@ function assignNearest(id){
         });
 
         booking.rider=nearest;
-        booking.status="Assigned";
+        booking.status="Accepted";
         localStorage.setItem('bookings',JSON.stringify(bookings));
 
         let phone = nearest.phone.replace(/^0/,"256");
         const msg=`Hello ${nearest.name},
 
-New boda ride assigned.
+You have a new boda ride.
 
 Customer: ${booking.customer}
 Phone: ${booking.phone}
 Pickup: ${booking.pickup}
 Destination: ${booking.destination}
-Time: ${booking.time}
-
-Reply:
-ACCEPT or REJECT`;
+Time: ${booking.time}`;
 
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
         loadAdmin();
     });
 }
 
-// STATUS CONTROLS
-function markAccepted(id){
-    const b=getBookings(); b.find(x=>x.id===id).status="Accepted";
-    localStorage.setItem('bookings',JSON.stringify(b)); loadAdmin();
-}
-function markRejected(id){
-    const b=getBookings(); 
-    const bk=b.find(x=>x.id===id);
-    bk.status="Rejected"; bk.rider=null;
-    localStorage.setItem('bookings',JSON.stringify(b)); loadAdmin();
-}
+// COMPLETE
 function markCompleted(id){
-    const b=getBookings(); b.find(x=>x.id===id).status="Completed";
-    localStorage.setItem('bookings',JSON.stringify(b)); loadAdmin();
+    const b=getBookings();
+    b.find(x=>x.id===id).status="Completed";
+    localStorage.setItem('bookings',JSON.stringify(b));
+    loadAdmin();
 }
 
 // DEFAULT
