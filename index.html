@@ -95,7 +95,7 @@ footer {
 
 <nav>
 <button onclick="showSection('book')">Book Ride</button>
-<button onclick="showSection('rider')">Add Rider</button>
+<button onclick="showSection('rider')">Riders</button>
 <button onclick="showSection('admin')">Admin</button>
 </nav>
 
@@ -105,10 +105,10 @@ footer {
 <div id="book" class="card section">
 <h2>Book a Ride</h2>
 
-<input id="custName" placeholder="Your Name" required>
-<input id="custPhone" placeholder="Phone Number" required>
-<input id="pickup" placeholder="Pickup Location" required>
-<input id="destination" placeholder="Destination" required>
+<input id="custName" placeholder="Your Name">
+<input id="custPhone" placeholder="Phone Number">
+<input id="pickup" placeholder="Pickup Location">
+<input id="destination" placeholder="Destination">
 
 <select id="time">
 <option>Now</option>
@@ -116,12 +116,12 @@ footer {
 <option>In 30 minutes</option>
 </select>
 
-<button class="submit" onclick="bookRide()">Confirm Booking</button>
+<button class="submit" onclick="bookRide()">Submit Booking</button>
 </div>
 
-<!-- ADD RIDER -->
+<!-- RIDERS -->
 <div id="rider" class="card section" style="display:none;">
-<h2>Add Rider Profile</h2>
+<h2>Add Rider</h2>
 
 <input id="riderName" placeholder="Rider Name">
 <input id="riderPhone" placeholder="Phone Number">
@@ -138,7 +138,6 @@ footer {
 <!-- ADMIN -->
 <div id="admin" class="card section" style="display:none;">
 <h2>Admin Dashboard</h2>
-<h3>Bookings</h3>
 <div id="bookingList"></div>
 </div>
 
@@ -188,16 +187,16 @@ function addRider(){
 
         loadRiderProfiles();
         alert("Rider added successfully");
-    }, () => alert("Location access required"));
+    }, () => alert("Allow location to add rider"));
 }
 
-// SHOW RIDERS
+// LOAD RIDERS
 function loadRiderProfiles(){
     const riders = getRiders();
     const container = document.getElementById('riderProfiles');
 
     if(riders.length === 0){
-        container.innerHTML = "<p>No riders registered yet.</p>";
+        container.innerHTML = "<p>No riders registered.</p>";
         return;
     }
 
@@ -205,54 +204,32 @@ function loadRiderProfiles(){
         <div class="rider">
             <strong>${r.name}</strong><br>
             📞 ${r.phone}<br>
-            🏍️ ${r.bike}<br>
-            📍 Location saved
+            🏍️ ${r.bike}
         </div>
     `).join('');
 }
 
-// BOOK RIDE
+// BOOK RIDE (NO ASSIGNMENT)
 function bookRide(){
-    const name = custName.value;
-    const phone = custPhone.value;
-    const pick = pickup.value;
-    const dest = destination.value;
-    const t = time.value;
-
-    if(!name || !phone || !pick || !dest){
+    if(!custName.value || !custPhone.value || !pickup.value || !destination.value){
         alert("Fill all booking details");
         return;
     }
 
-    const riders = getRiders();
-    if(riders.length === 0){
-        alert("No riders available");
-        return;
-    }
-
-    const assigned = riders[Math.floor(Math.random() * riders.length)];
-
     const bookings = getBookings();
     bookings.push({
-        customer: name,
-        phone,
-        pickup: pick,
-        destination: dest,
-        time: t,
-        rider: assigned.name
+        id: Date.now(),
+        customer: custName.value,
+        phone: custPhone.value,
+        pickup: pickup.value,
+        destination: destination.value,
+        time: time.value,
+        rider: null,
+        status: "Pending"
     });
     localStorage.setItem('bookings', JSON.stringify(bookings));
 
-    const msg = `Hello ${assigned.name}, new ride booked.
-Customer: ${name}
-Phone: ${phone}
-Pickup: ${pick}
-Destination: ${dest}
-Time: ${t}`;
-
-    window.open(`https://wa.me/${assigned.phone}?text=${encodeURIComponent(msg)}`);
-
-    alert(`Ride confirmed!\nRider: ${assigned.name}\nPhone: ${assigned.phone}`);
+    alert("Booking received. Await rider assignment.");
 
     custName.value='';
     custPhone.value='';
@@ -260,9 +237,10 @@ Time: ${t}`;
     destination.value='';
 }
 
-// ADMIN VIEW
+// ADMIN + ASSIGN RIDER
 function loadAdmin(){
     const bookings = getBookings();
+    const riders = getRiders();
     const list = document.getElementById('bookingList');
 
     if(bookings.length === 0){
@@ -273,11 +251,55 @@ function loadAdmin(){
     list.innerHTML = bookings.map(b => `
         <div class="booking">
             <strong>${b.customer}</strong><br>
+            📞 ${b.phone}<br>
             ${b.pickup} → ${b.destination}<br>
             ⏰ ${b.time}<br>
-            🏍️ Rider: ${b.rider}
+            🚦 Status: <b>${b.status}</b><br><br>
+
+            ${
+                b.rider
+                ? `🏍️ Rider: <b>${b.rider.name}</b>`
+                : `
+                <select onchange="assignRider(${b.id}, this.value)">
+                    <option value="">Assign Rider</option>
+                    ${riders.map(r => `
+                        <option value="${r.id}">
+                            ${r.name} (${r.bike})
+                        </option>
+                    `).join('')}
+                </select>
+                `
+            }
         </div>
     `).join('');
+}
+
+// ASSIGN RIDER + WHATSAPP
+function assignRider(bookingId, riderId){
+    if(!riderId) return;
+
+    const bookings = getBookings();
+    const riders = getRiders();
+
+    const booking = bookings.find(b => b.id === bookingId);
+    const rider = riders.find(r => r.id == riderId);
+
+    booking.rider = rider;
+    booking.status = "Assigned";
+
+    localStorage.setItem('bookings', JSON.stringify(bookings));
+
+    const msg = `Hello ${rider.name}, new ride assigned.
+
+Customer: ${booking.customer}
+Phone: ${booking.phone}
+Pickup: ${booking.pickup}
+Destination: ${booking.destination}
+Time: ${booking.time}`;
+
+    window.open(`https://wa.me/${rider.phone}?text=${encodeURIComponent(msg)}`);
+
+    loadAdmin();
 }
 
 // DEFAULT
