@@ -34,240 +34,169 @@ hr { margin: 20px 0; }
 
 <div class="container">
 
-<!-- BOOK -->
 <div id="book" class="card section">
 <h2>Book a Ride</h2>
 <input id="custName" placeholder="Your Name">
-<input id="custPhone" placeholder="Phone Number">
+<input id="custPhone" placeholder="Phone Number (2567xxxxxxx)">
 <input id="pickup" placeholder="Pickup Location">
 <input id="destination" placeholder="Destination">
-
 <select id="rideType">
 <option value="Motorcycle">Motorcycle</option>
 <option value="Car">Car</option>
 </select>
-
 <select id="time"></select>
-
 <button class="submit" onclick="bookRide()">Submit Booking</button>
 </div>
 
-<!-- LOGIN -->
 <div id="riderLogin" class="card section" style="display:none;">
 <h2>Rider / Admin Login</h2>
 <input id="loginInput" placeholder="Bike / Car Plate or Admin PIN">
 <button class="submit" onclick="riderOrAdminLogin()">Login</button>
 </div>
 
-<!-- RIDER DASHBOARD -->
 <div id="rider" class="card section" style="display:none;">
-<h2>Rider / Driver Dashboard</h2>
+<h2>Rider Dashboard</h2>
 <input id="updatePlate" placeholder="Your Plate">
 <button class="submit" onclick="updateMyLocation()">Update My Location</button>
 <hr>
-<h3>Assigned Bookings</h3>
 <div id="riderBookings"></div>
 </div>
 
-<!-- ADMIN -->
 <div id="admin" class="card section" style="display:none;">
 <h2>Admin Dashboard</h2>
-
-<h3>Register Motorcycle Rider</h3>
-<input id="riderName" placeholder="Name">
-<input id="riderPhone" placeholder="Phone">
-<input id="vehicle" placeholder="Bike Plate">
-<button class="submit" onclick="addRider('Motorcycle')">Add Rider</button>
-
-<hr>
-
-<h3>Register Car Driver</h3>
-<input id="driverName" placeholder="Name">
-<input id="driverPhone" placeholder="Phone">
-<input id="carPlate" placeholder="Car Plate">
-<select id="carType">
-<option>Sedan</option>
-<option>SUV</option>
-<option>Van</option>
-<option>Pickup</option>
-</select>
-<button class="submit" onclick="addRider('Car')">Add Driver</button>
-
-<hr>
-
-<h3>Registered Riders / Drivers</h3>
-<div id="riderProfilesAdmin"></div>
-
-<hr>
-
-<h3>Bookings</h3>
 <div id="bookingList"></div>
 </div>
 
 </div>
 
 <script>
-/* ================== DATA ================== */
-const ADMIN_PIN = "1234";
-let currentRider = null;
+const ADMIN_PIN="1234";
+const RATE={ Motorcycle:1500, Car:3000 };
+let currentRider=null;
 
-const getRiders = () => JSON.parse(localStorage.getItem("riders") || "[]");
-const getBookings = () => JSON.parse(localStorage.getItem("bookings") || "[]");
-const saveBookings = b => localStorage.setItem("bookings", JSON.stringify(b));
+const getRiders=()=>JSON.parse(localStorage.getItem("riders")||"[]");
+const getBookings=()=>JSON.parse(localStorage.getItem("bookings")||"[]");
+const saveBookings=b=>localStorage.setItem("bookings",JSON.stringify(b));
 
-/* ================== NAV ================== */
 function showSection(id){
-  document.querySelectorAll(".section").forEach(s => s.style.display="none");
-  document.getElementById(id).style.display="block";
-  if(id==="admin"){ loadAdmin(); loadAdminRiders(); }
-  if(id==="rider"){ loadRiderBookings(); }
+ document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+ document.getElementById(id).style.display="block";
+ if(id==="admin") loadAdmin();
+ if(id==="rider") loadRiderBookings();
 }
 
 function openAdmin(){
-  const pin = prompt("Enter Admin PIN");
-  if(pin===ADMIN_PIN) showSection("admin");
-  else alert("Wrong PIN");
+ if(prompt("Enter Admin PIN")===ADMIN_PIN) showSection("admin");
+ else alert("Wrong PIN");
 }
 
-/* ================== LOGIN ================== */
 function riderOrAdminLogin(){
-  const v = loginInput.value.trim();
-  if(v===ADMIN_PIN){ showSection("admin"); return; }
-
-  const rider = getRiders().find(r => r.plate.toLowerCase()===v.toLowerCase());
-  if(!rider) return alert("Not registered");
-
-  currentRider = rider;
-  showSection("rider");
+ const v=loginInput.value.trim();
+ if(v===ADMIN_PIN){showSection("admin");return;}
+ const r=getRiders().find(x=>x.plate===v);
+ if(!r) return alert("Not registered");
+ currentRider=r; showSection("rider");
 }
 
-/* ================== RIDERS ================== */
-function addRider(type){
-  navigator.geolocation.getCurrentPosition(p=>{
-    const riders = getRiders();
-    const plate = type==="Motorcycle" ? vehicle.value : carPlate.value;
-    if(!plate) return alert("Plate required");
-    if(riders.find(r=>r.plate===plate)) return alert("Plate exists");
-
-    riders.push({
-      id: Date.now(),
-      name: type==="Motorcycle" ? riderName.value : driverName.value,
-      phone: type==="Motorcycle" ? riderPhone.value : driverPhone.value,
-      plate,
-      type,
-      vehicleType: type==="Car" ? carType.value : "",
-      lat: p.coords.latitude,
-      lng: p.coords.longitude
-    });
-
-    localStorage.setItem("riders", JSON.stringify(riders));
-    loadAdminRiders();
-  });
+function haversine(lat1,lon1,lat2,lon2){
+ const R=6371;
+ const dLat=(lat2-lat1)*Math.PI/180;
+ const dLon=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dLat/2)**2+
+ Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+ Math.sin(dLon/2)**2;
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-function updateMyLocation(){
-  navigator.geolocation.getCurrentPosition(p=>{
-    const riders = getRiders();
-    const me = riders.find(r=>r.plate===updatePlate.value);
-    if(!me) return alert("Plate not found");
-
-    me.lat = p.coords.latitude;
-    me.lng = p.coords.longitude;
-    localStorage.setItem("riders", JSON.stringify(riders));
-    alert("Location updated");
-  });
+function sendWhatsApp(phone,msg){
+ window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
 }
 
-/* ================== BOOKINGS ================== */
+function autoAssignNearest(id){
+ const bookings=getBookings();
+ const b=bookings.find(x=>x.id===id);
+ const riders=getRiders().filter(r=>r.type===b.type);
+
+ const plat=parseFloat(prompt("Pickup LAT"));
+ const plong=parseFloat(prompt("Pickup LNG"));
+ const dlat=parseFloat(prompt("Destination LAT"));
+ const dlng=parseFloat(prompt("Destination LNG"));
+
+ const dist=haversine(plat,plong,dlat,dlng);
+ const fare=Math.round(dist*RATE[b.type]);
+
+ let nearest=null,min=Infinity;
+ riders.forEach(r=>{
+   const d=haversine(plat,plong,r.lat,r.lng);
+   if(d<min){min=d;nearest=r;}
+ });
+
+ b.riderPlate=nearest.plate;
+ b.status="Assigned";
+ b.distance=dist.toFixed(2);
+ b.fare=fare;
+
+ saveBookings(bookings);
+ loadAdmin();
+
+ sendWhatsApp(b.phone,
+ `Your ride is confirmed.
+ Distance: ${b.distance} km
+ Fare: UGX ${fare}`);
+
+ sendWhatsApp(nearest.phone,
+ `New ride assigned:
+ ${b.pickup} → ${b.destination}
+ Fare: UGX ${fare}`);
+}
+
 function bookRide(){
-  const bookings = getBookings();
-  bookings.push({
-    id: Date.now(),
-    customer: custName.value,
-    phone: custPhone.value,
-    pickup: pickup.value,
-    destination: destination.value,
-    type: rideType.value,
-    time: time.value,
-    status: "Pending",
-    riderPlate: null
-  });
-  saveBookings(bookings);
-  alert("Booking received");
+ const b=getBookings();
+ b.push({
+  id:Date.now(),
+  customer:custName.value,
+  phone:custPhone.value,
+  pickup, destination,
+  type:rideType.value,
+  time:time.value,
+  status:"Pending"
+ });
+ saveBookings(b);
+ alert("Booking received");
 }
 
-/* ================== ADMIN ================== */
 function loadAdmin(){
-  const riders = getRiders();
-  bookingList.innerHTML = getBookings().map(b=>`
-    <div class="booking">
-      <b>${b.customer}</b> (${b.type})<br>
-      ${b.pickup} → ${b.destination}<br>
-      Time: ${b.time}<br>
-      Status: ${b.status}<br>
-      Rider: ${b.riderPlate || "Unassigned"}<br>
-      ${b.status==="Pending" ? `
-        <select onchange="assignRider(${b.id},this.value)">
-          <option value="">Assign</option>
-          ${riders.filter(r=>r.type===b.type)
-            .map(r=>`<option value="${r.plate}">${r.name} (${r.plate})</option>`).join("")}
-        </select>` : ""}
-    </div>
-  `).join("");
+ bookingList.innerHTML=getBookings().map(b=>`
+ <div class="booking">
+ <b>${b.customer}</b> (${b.type})<br>
+ ${b.pickup} → ${b.destination}<br>
+ Status: ${b.status}<br>
+ Fare: ${b.fare||"—"}<br>
+ ${b.status==="Pending"?
+ `<button class="action" onclick="autoAssignNearest(${b.id})">
+ Auto Assign + Price + Notify
+ </button>`:""}
+ </div>`).join("");
 }
 
-function assignRider(id,plate){
-  if(!plate) return;
-  const bookings = getBookings();
-  const b = bookings.find(x=>x.id===id);
-  b.riderPlate = plate;
-  b.status = "Assigned";
-  saveBookings(bookings);
-  loadAdmin();
-}
-
-function loadAdminRiders(){
-  riderProfilesAdmin.innerHTML = getRiders()
-    .map(r=>`<div class="rider">${r.name} | ${r.plate} | ${r.type}</div>`).join("");
-}
-
-/* ================== RIDER DASHBOARD ================== */
 function loadRiderBookings(){
-  const list = getBookings().filter(b=>b.riderPlate===currentRider.plate);
-  riderBookings.innerHTML = list.length
-    ? list.map(b=>`
-      <div class="booking">
-        <b>${b.customer}</b><br>
-        ${b.pickup} → ${b.destination}<br>
-        Time: ${b.time}<br>
-        Status: ${b.status}<br>
-        <button class="action" onclick="completeBooking(${b.id})">Complete</button>
-      </div>`).join("")
-    : "<p>No assigned bookings</p>";
+ riderBookings.innerHTML=getBookings()
+ .filter(b=>b.riderPlate===currentRider.plate)
+ .map(b=>`<div class="booking">
+ ${b.pickup} → ${b.destination}<br>
+ Fare: UGX ${b.fare}
+ </div>`).join("");
 }
 
-function completeBooking(id){
-  const bookings = getBookings();
-  const b = bookings.find(x=>x.id===id);
-  b.status="Completed";
-  saveBookings(bookings);
-  loadRiderBookings();
-}
-
-/* ================== TIME OPTIONS ================== */
 const baseTimes=["Now","In 15 minutes","In 30 minutes"];
-const carTimes=["In 2 hours","In 4 hours","In 8 hours","In 1 day","In 3 days","In 1 week"];
-
+const carTimes=["In 2 hours","In 4 hours","In 1 day"];
 function updateTimeOptions(){
-  time.innerHTML="";
-  baseTimes.forEach(t=>time.add(new Option(t,t)));
-  if(rideType.value==="Car"){
-    carTimes.forEach(t=>time.add(new Option(t,t)));
-  }
+ time.innerHTML="";
+ baseTimes.forEach(t=>time.add(new Option(t,t)));
+ if(rideType.value==="Car") carTimes.forEach(t=>time.add(new Option(t,t)));
 }
 rideType.addEventListener("change",updateTimeOptions);
 updateTimeOptions();
-
 showSection("book");
 </script>
 
