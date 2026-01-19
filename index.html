@@ -3,243 +3,272 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jinja Boda B – Ride Platform</title>
+<title>Jinja Boda B Booking & Car Hire</title>
 
 <style>
-body{font-family:Segoe UI,sans-serif;background:#f9fafb;margin:0}
-header{background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;text-align:center;padding:20px}
-nav{display:flex;justify-content:center;gap:10px;margin:10px;flex-wrap:wrap}
-nav button{background:#0f766e;color:white;border:none;padding:10px 15px;border-radius:8px}
-.container{max-width:900px;margin:auto;padding:20px}
-.card{background:white;padding:20px;border-radius:15px;margin-bottom:20px}
-input,select,textarea{width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:1px solid #ccc}
-button{width:100%;padding:12px;border:none;border-radius:12px;background:#0f766e;color:white;font-weight:bold;margin-top:5px}
-.booking{background:#f3f4f6;padding:12px;border-radius:10px;margin-bottom:10px}
-.receipt{border:2px dashed #0f766e;padding:15px;border-radius:12px;background:#ecfeff}
-.star{color:gold;font-size:18px}
-.small{font-size:13px;color:#555}
-.toggle{background:#14b8a6}
-.offline{background:#dc2626}
-a{color:#0f766e;font-weight:bold;text-decoration:none}
+body { font-family: "Segoe UI", sans-serif; background: #f9fafb; margin: 0; }
+header { background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; text-align: center; padding: 20px; }
+nav { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
+nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #0f766e; color: white; cursor: pointer; }
+.container { max-width: 600px; margin: auto; padding: 20px; }
+.card { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
+input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #d1d5db; }
+button.submit, button.action { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #0f766e; color: white; font-weight: bold; cursor: pointer; }
+.booking, .rider { background: #f3f4f6; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #d1d5db; }
+hr { margin: 20px 0; }
 </style>
 </head>
 
 <body>
 
 <header>
-<h1>Jinja Boda B</h1>
-<p>Bookings • Payments • Receipts • Ratings</p>
+<h1>Jinja Boda B Booking & Special Car Hire</h1>
+<p>Ride Safe • Arrive on Time • Support Local Riders</p>
 </header>
 
 <nav>
-<button onclick="show('book')">Book</button>
-<button onclick="show('customerLogin')">Customer</button>
-<button onclick="show('riderLogin')">Rider</button>
-<button onclick="adminLogin()">Admin</button>
+<button onclick="showSection('book')">Book Ride</button>
+<button onclick="showSection('riderLogin')">Riders / Drivers</button>
+<button onclick="openAdmin()">Admin</button>
 </nav>
 
 <div class="container">
 
 <!-- BOOK -->
 <div id="book" class="card section">
-<h3>Book Ride</h3>
-<input id="custName" placeholder="Name">
-<input id="custPhone" placeholder="Phone">
-<input id="pickup" placeholder="Pickup">
+<h2>Book a Ride</h2>
+<input id="custName" placeholder="Your Name">
+<input id="custPhone" placeholder="Phone Number">
+<input id="pickup" placeholder="Pickup Location">
 <input id="destination" placeholder="Destination">
-<select id="rideType"><option>Motorcycle</option><option>Car</option></select>
+
+<select id="rideType">
+<option value="Motorcycle">Motorcycle</option>
+<option value="Car">Car</option>
+</select>
+
 <select id="time"></select>
-<button onclick="bookRide()">Submit</button>
+
+<button class="submit" onclick="bookRide()">Submit Booking</button>
 </div>
 
-<!-- CUSTOMER LOGIN -->
-<div id="customerLogin" class="card section" style="display:none;">
-<h3>Customer Login (OTP)</h3>
-<input id="custLoginPhone" placeholder="Phone">
-<button onclick="sendOTP()">Send OTP</button>
-<div id="otpBox" style="display:none;">
-<input id="otpInput" placeholder="OTP">
-<button onclick="verifyOTP()">Verify</button>
-</div>
-</div>
-
-<!-- CUSTOMER -->
-<div id="customerTrack" class="card section" style="display:none;">
-<h3>Current / Past Trips</h3>
-<div id="customerTrips"></div>
-</div>
-
-<!-- RIDER LOGIN -->
+<!-- LOGIN -->
 <div id="riderLogin" class="card section" style="display:none;">
-<h3>Rider Login</h3>
-<input id="loginInput" placeholder="Plate">
-<button onclick="riderLogin()">Login</button>
+<h2>Rider / Admin Login</h2>
+<input id="loginInput" placeholder="Bike / Car Plate or Admin PIN">
+<button class="submit" onclick="riderOrAdminLogin()">Login</button>
 </div>
 
-<!-- RIDER -->
+<!-- RIDER DASHBOARD -->
 <div id="rider" class="card section" style="display:none;">
-<h3>Rider Dashboard</h3>
-<button id="availabilityBtn" class="toggle" onclick="toggleAvailability()">🔴 OFFLINE</button>
-<div id="riderJobs"></div>
+<h2>Rider / Driver Dashboard</h2>
+<input id="updatePlate" placeholder="Your Plate">
+<button class="submit" onclick="updateMyLocation()">Update My Location</button>
 <hr>
-<h3>My Ratings</h3>
-<div id="riderRatings"></div>
+<h3>Assigned Bookings</h3>
+<div id="riderBookings"></div>
 </div>
 
 <!-- ADMIN -->
 <div id="admin" class="card section" style="display:none;">
-<h3>Admin Dashboard</h3>
-<button onclick="autoAssign()">🚀 Auto Assign</button>
-<div id="adminBookings"></div>
+<h2>Admin Dashboard</h2>
+
+<h3>Register Motorcycle Rider</h3>
+<input id="riderName" placeholder="Name">
+<input id="riderPhone" placeholder="Phone">
+<input id="vehicle" placeholder="Bike Plate">
+<button class="submit" onclick="addRider('Motorcycle')">Add Rider</button>
+
 <hr>
-<h3>Rider Ratings</h3>
-<div id="adminRatings"></div>
+
+<h3>Register Car Driver</h3>
+<input id="driverName" placeholder="Name">
+<input id="driverPhone" placeholder="Phone">
+<input id="carPlate" placeholder="Car Plate">
+<select id="carType">
+<option>Sedan</option>
+<option>SUV</option>
+<option>Van</option>
+<option>Pickup</option>
+</select>
+<button class="submit" onclick="addRider('Car')">Add Driver</button>
+
+<hr>
+
+<h3>Registered Riders / Drivers</h3>
+<div id="riderProfilesAdmin"></div>
+
+<hr>
+
+<h3>Bookings</h3>
+<div id="bookingList"></div>
 </div>
 
 </div>
 
 <script>
-const ADMIN_PIN="1234";
-const RATE={Motorcycle:1500,Car:3000};
+/* ================== DATA ================== */
+const ADMIN_PIN = "1234";
+let currentRider = null;
 
-let generatedOTP=null,loggedCustomerPhone=null,currentRider=null;
+const getRiders = () => JSON.parse(localStorage.getItem("riders") || "[]");
+const getBookings = () => JSON.parse(localStorage.getItem("bookings") || "[]");
+const saveBookings = b => localStorage.setItem("bookings", JSON.stringify(b));
 
-const riders=()=>JSON.parse(localStorage.getItem("riders")||"[]");
-const bookings=()=>JSON.parse(localStorage.getItem("bookings")||"[]");
-const saveRiders=r=>localStorage.setItem("riders",JSON.stringify(r));
-const saveBookings=b=>localStorage.setItem("bookings",JSON.stringify(b));
-
-function show(id){
-document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-document.getElementById(id).style.display="block";
-if(id==="admin")loadAdmin();
+/* ================== NAV ================== */
+function showSection(id){
+  document.querySelectorAll(".section").forEach(s => s.style.display="none");
+  document.getElementById(id).style.display="block";
+  if(id==="admin"){ loadAdmin(); loadAdminRiders(); }
+  if(id==="rider"){ loadRiderBookings(); }
 }
 
-/* OTP */
-function sendOTP(){
-generatedOTP=Math.floor(1000+Math.random()*9000);
-alert("OTP (demo): "+generatedOTP);
-otpBox.style.display="block";
-}
-function verifyOTP(){
-if(otpInput.value==generatedOTP){
-loggedCustomerPhone=custLoginPhone.value;
-show("customerTrack");
-loadCustomer();
-}else alert("Wrong OTP");
+function openAdmin(){
+  const pin = prompt("Enter Admin PIN");
+  if(pin===ADMIN_PIN) showSection("admin");
+  else alert("Wrong PIN");
 }
 
-/* BOOK */
+/* ================== LOGIN ================== */
+function riderOrAdminLogin(){
+  const v = loginInput.value.trim();
+  if(v===ADMIN_PIN){ showSection("admin"); return; }
+
+  const rider = getRiders().find(r => r.plate.toLowerCase()===v.toLowerCase());
+  if(!rider) return alert("Not registered");
+
+  currentRider = rider;
+  showSection("rider");
+}
+
+/* ================== RIDERS ================== */
+function addRider(type){
+  navigator.geolocation.getCurrentPosition(p=>{
+    const riders = getRiders();
+    const plate = type==="Motorcycle" ? vehicle.value : carPlate.value;
+    if(!plate) return alert("Plate required");
+    if(riders.find(r=>r.plate===plate)) return alert("Plate exists");
+
+    riders.push({
+      id: Date.now(),
+      name: type==="Motorcycle" ? riderName.value : driverName.value,
+      phone: type==="Motorcycle" ? riderPhone.value : driverPhone.value,
+      plate,
+      type,
+      vehicleType: type==="Car" ? carType.value : "",
+      lat: p.coords.latitude,
+      lng: p.coords.longitude
+    });
+
+    localStorage.setItem("riders", JSON.stringify(riders));
+    loadAdminRiders();
+  });
+}
+
+function updateMyLocation(){
+  navigator.geolocation.getCurrentPosition(p=>{
+    const riders = getRiders();
+    const me = riders.find(r=>r.plate===updatePlate.value);
+    if(!me) return alert("Plate not found");
+
+    me.lat = p.coords.latitude;
+    me.lng = p.coords.longitude;
+    localStorage.setItem("riders", JSON.stringify(riders));
+    alert("Location updated");
+  });
+}
+
+/* ================== BOOKINGS ================== */
 function bookRide(){
-navigator.geolocation.getCurrentPosition(p=>{
-const b=bookings();
-b.push({
-id:Date.now(),
-receipt:"JBB-"+Math.floor(Math.random()*100000),
-customer:custName.value,
-phone:custPhone.value,
-pickup:pickup.value,
-destination:destination.value,
-type:rideType.value,
-time:time.value,
-lat:p.coords.latitude,lng:p.coords.longitude,
-status:"Pending",
-rider:null,fare:null,
-rating:null,review:null,
-date:new Date().toLocaleString()
-});
-saveBookings(b);
-alert("Booking received");
-});
+  const bookings = getBookings();
+  bookings.push({
+    id: Date.now(),
+    customer: custName.value,
+    phone: custPhone.value,
+    pickup: pickup.value,
+    destination: destination.value,
+    type: rideType.value,
+    time: time.value,
+    status: "Pending",
+    riderPlate: null
+  });
+  saveBookings(bookings);
+  alert("Booking received");
 }
 
-/* AUTO ASSIGN */
-function autoAssign(){
-let b=bookings(),r=riders();
-b.filter(x=>x.status==="Pending").forEach(x=>{
-let best=null,min=9999;
-r.filter(y=>y.type===x.type&&y.available).forEach(y=>{
-const d=Math.hypot(x.lat-y.lat,x.lng-y.lng);
-if(d<min){min=d;best=y;}
-});
-if(best){
-x.rider=best.plate;
-x.status="Assigned";
-x.fare=Math.round(min*RATE[x.type]);
-}
-});
-saveBookings(b);
-loadAdmin();
-}
-
-/* CUSTOMER VIEW */
-function loadCustomer(){
-const b=bookings().filter(x=>x.phone===loggedCustomerPhone);
-customerTrips.innerHTML=b.map(x=>`
-<div class="receipt">
-<b>${x.pickup}</b> → ${x.destination}<br>
-Fare: UGX ${x.fare||"?"}<br>
-Status: ${x.status}<br>
-${x.status==="Completed" && !x.rating ? `
-<select onchange="rateTrip(${x.id},this.value)">
-<option value="">Rate Rider</option>
-<option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-</select>
-<textarea placeholder="Review..." onchange="reviewTrip(${x.id},this.value)"></textarea>
-<button onclick="submitRating(${x.id})">Submit Rating</button>
-` : x.rating ? `
-Rating: ${"★".repeat(x.rating)}<br>
-Review: ${x.review||"—"}
-` : ""}
-</div>`).join("");
-}
-
-/* SUBMIT RATING */
-function rateTrip(id,val){const b=bookings();b.find(x=>x.id===id).rating=parseInt(val);saveBookings(b);}
-function reviewTrip(id,val){const b=bookings();b.find(x=>x.id===id).review=val;saveBookings(b);}
-function submitRating(id){
-const b=bookings();const trip=b.find(x=>x.id===id);
-const r=riders();const rider=r.find(y=>y.plate===trip.rider);
-rider.ratingCount=(rider.ratingCount||0)+1;
-rider.ratingAvg=((rider.ratingAvg||0)*(rider.ratingCount-1)+trip.rating)/rider.ratingCount;
-saveRiders(r);saveBookings(b);
-alert("Thank you for rating");
-loadCustomer();
-}
-
-/* RIDER */
-function riderLogin(){
-const r=riders().find(x=>x.plate===loginInput.value);
-if(!r)return alert("Not registered");
-currentRider=r;show("rider");loadRider();
-}
-function toggleAvailability(){
-const r=riders();const me=r.find(x=>x.plate===currentRider.plate);
-me.available=!me.available;saveRiders(r);
-availabilityBtn.textContent=me.available?"🟢 ONLINE":"🔴 OFFLINE";
-availabilityBtn.className=me.available?"toggle":"toggle offline";
-}
-function loadRider(){
-const r=riders().find(x=>x.plate===currentRider.plate);
-riderRatings.innerHTML=`
-Average Rating: ${r.ratingAvg? r.ratingAvg.toFixed(1):"N/A"} ⭐<br>
-Reviews: ${r.ratingCount||0}
-`;
-}
-
-/* ADMIN */
-function adminLogin(){if(prompt("PIN")===ADMIN_PIN)show("admin")}
+/* ================== ADMIN ================== */
 function loadAdmin(){
-adminRatings.innerHTML=riders().map(r=>`
-<div class="booking">
-${r.plate} — ⭐ ${r.ratingAvg? r.ratingAvg.toFixed(1):"N/A"} (${r.ratingCount||0} reviews)
-</div>`).join("");
+  const riders = getRiders();
+  bookingList.innerHTML = getBookings().map(b=>`
+    <div class="booking">
+      <b>${b.customer}</b> (${b.type})<br>
+      ${b.pickup} → ${b.destination}<br>
+      Time: ${b.time}<br>
+      Status: ${b.status}<br>
+      Rider: ${b.riderPlate || "Unassigned"}<br>
+      ${b.status==="Pending" ? `
+        <select onchange="assignRider(${b.id},this.value)">
+          <option value="">Assign</option>
+          ${riders.filter(r=>r.type===b.type)
+            .map(r=>`<option value="${r.plate}">${r.name} (${r.plate})</option>`).join("")}
+        </select>` : ""}
+    </div>
+  `).join("");
 }
 
-/* TIME */
-const base=["Now","15 min","30 min"],car=["2 hrs","4 hrs","1 day","1 week"];
-function loadTime(){time.innerHTML="";base.forEach(t=>time.add(new Option(t,t)));if(rideType.value==="Car")car.forEach(t=>time.add(new Option(t,t)));}
-rideType.onchange=loadTime;loadTime();show("book");
+function assignRider(id,plate){
+  if(!plate) return;
+  const bookings = getBookings();
+  const b = bookings.find(x=>x.id===id);
+  b.riderPlate = plate;
+  b.status = "Assigned";
+  saveBookings(bookings);
+  loadAdmin();
+}
+
+function loadAdminRiders(){
+  riderProfilesAdmin.innerHTML = getRiders()
+    .map(r=>`<div class="rider">${r.name} | ${r.plate} | ${r.type}</div>`).join("");
+}
+
+/* ================== RIDER DASHBOARD ================== */
+function loadRiderBookings(){
+  const list = getBookings().filter(b=>b.riderPlate===currentRider.plate);
+  riderBookings.innerHTML = list.length
+    ? list.map(b=>`
+      <div class="booking">
+        <b>${b.customer}</b><br>
+        ${b.pickup} → ${b.destination}<br>
+        Time: ${b.time}<br>
+        Status: ${b.status}<br>
+        <button class="action" onclick="completeBooking(${b.id})">Complete</button>
+      </div>`).join("")
+    : "<p>No assigned bookings</p>";
+}
+
+function completeBooking(id){
+  const bookings = getBookings();
+  const b = bookings.find(x=>x.id===id);
+  b.status="Completed";
+  saveBookings(bookings);
+  loadRiderBookings();
+}
+
+/* ================== TIME OPTIONS ================== */
+const baseTimes=["Now","In 15 minutes","In 30 minutes"];
+const carTimes=["In 2 hours","In 4 hours","In 8 hours","In 1 day","In 3 days","In 1 week"];
+
+function updateTimeOptions(){
+  time.innerHTML="";
+  baseTimes.forEach(t=>time.add(new Option(t,t)));
+  if(rideType.value==="Car"){
+    carTimes.forEach(t=>time.add(new Option(t,t)));
+  }
+}
+rideType.addEventListener("change",updateTimeOptions);
+updateTimeOptions();
+
+showSection("book");
 </script>
 
 </body>
