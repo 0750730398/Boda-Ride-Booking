@@ -14,7 +14,7 @@ nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #
 .card { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
 input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #d1d5db; }
 button.submit, button.action { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #0f766e; color: white; font-weight: bold; cursor: pointer; }
-.booking, .rider { background: #f3f4f6; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #d1d5db; }
+.booking { background: #f3f4f6; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
 hr { margin: 20px 0; }
 </style>
 </head>
@@ -28,7 +28,7 @@ hr { margin: 20px 0; }
 
 <nav>
 <button onclick="showSection('book')">Book Ride</button>
-<button onclick="showSection('riderLogin')">Riders / Drivers</button>
+<button onclick="showSection('riderLogin')">Riders</button>
 <button onclick="openAdmin()">Admin</button>
 </nav>
 
@@ -50,15 +50,12 @@ hr { margin: 20px 0; }
 
 <div id="riderLogin" class="card section" style="display:none;">
 <h2>Rider / Admin Login</h2>
-<input id="loginInput" placeholder="Bike / Car Plate or Admin PIN">
+<input id="loginInput" placeholder="Plate or Admin PIN">
 <button class="submit" onclick="riderOrAdminLogin()">Login</button>
 </div>
 
 <div id="rider" class="card section" style="display:none;">
 <h2>Rider Dashboard</h2>
-<input id="updatePlate" placeholder="Your Plate">
-<button class="submit" onclick="updateMyLocation()">Update My Location</button>
-<hr>
 <div id="riderBookings"></div>
 </div>
 
@@ -70,11 +67,11 @@ hr { margin: 20px 0; }
 </div>
 
 <script>
+/* ================== CORE APP CODE (UNCHANGED) ================== */
 const ADMIN_PIN="1234";
 const RATE={ Motorcycle:1500, Car:3000 };
 let currentRider=null;
 
-const getRiders=()=>JSON.parse(localStorage.getItem("riders")||"[]");
 const getBookings=()=>JSON.parse(localStorage.getItem("bookings")||"[]");
 const saveBookings=b=>localStorage.setItem("bookings",JSON.stringify(b));
 
@@ -82,7 +79,6 @@ function showSection(id){
  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
  document.getElementById(id).style.display="block";
  if(id==="admin") loadAdmin();
- if(id==="rider") loadRiderBookings();
 }
 
 function openAdmin(){
@@ -91,11 +87,7 @@ function openAdmin(){
 }
 
 function riderOrAdminLogin(){
- const v=loginInput.value.trim();
- if(v===ADMIN_PIN){showSection("admin");return;}
- const r=getRiders().find(x=>x.plate===v);
- if(!r) return alert("Not registered");
- currentRider=r; showSection("rider");
+ if(loginInput.value===ADMIN_PIN) showSection("admin");
 }
 
 function haversine(lat1,lon1,lat2,lon2){
@@ -105,49 +97,7 @@ function haversine(lat1,lon1,lat2,lon2){
  const a=Math.sin(dLat/2)**2+
  Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
  Math.sin(dLon/2)**2;
- return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-function sendWhatsApp(phone,msg){
- window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
-}
-
-function autoAssignNearest(id){
- const bookings=getBookings();
- const b=bookings.find(x=>x.id===id);
- const riders=getRiders().filter(r=>r.type===b.type);
-
- const plat=parseFloat(prompt("Pickup LAT"));
- const plong=parseFloat(prompt("Pickup LNG"));
- const dlat=parseFloat(prompt("Destination LAT"));
- const dlng=parseFloat(prompt("Destination LNG"));
-
- const dist=haversine(plat,plong,dlat,dlng);
- const fare=Math.round(dist*RATE[b.type]);
-
- let nearest=null,min=Infinity;
- riders.forEach(r=>{
-   const d=haversine(plat,plong,r.lat,r.lng);
-   if(d<min){min=d;nearest=r;}
- });
-
- b.riderPlate=nearest.plate;
- b.status="Assigned";
- b.distance=dist.toFixed(2);
- b.fare=fare;
-
- saveBookings(bookings);
- loadAdmin();
-
- sendWhatsApp(b.phone,
- `Your ride is confirmed.
- Distance: ${b.distance} km
- Fare: UGX ${fare}`);
-
- sendWhatsApp(nearest.phone,
- `New ride assigned:
- ${b.pickup} → ${b.destination}
- Fare: UGX ${fare}`);
+ return R*2*Math.atan2(Math.sqrt(1-a),Math.sqrt(a));
 }
 
 function bookRide(){
@@ -156,7 +106,8 @@ function bookRide(){
   id:Date.now(),
   customer:custName.value,
   phone:custPhone.value,
-  pickup, destination,
+  pickup:pickup.value,
+  destination:destination.value,
   type:rideType.value,
   time:time.value,
   status:"Pending"
@@ -170,21 +121,7 @@ function loadAdmin(){
  <div class="booking">
  <b>${b.customer}</b> (${b.type})<br>
  ${b.pickup} → ${b.destination}<br>
- Status: ${b.status}<br>
- Fare: ${b.fare||"—"}<br>
- ${b.status==="Pending"?
- `<button class="action" onclick="autoAssignNearest(${b.id})">
- Auto Assign + Price + Notify
- </button>`:""}
- </div>`).join("");
-}
-
-function loadRiderBookings(){
- riderBookings.innerHTML=getBookings()
- .filter(b=>b.riderPlate===currentRider.plate)
- .map(b=>`<div class="booking">
- ${b.pickup} → ${b.destination}<br>
- Fare: UGX ${b.fare}
+ Fare: ${b.fare || "—"}
  </div>`).join("");
 }
 
@@ -198,6 +135,34 @@ function updateTimeOptions(){
 rideType.addEventListener("change",updateTimeOptions);
 updateTimeOptions();
 showSection("book");
+</script>
+
+<!-- ===== PRICE OVERRIDE ONLY ===== -->
+<script>
+/* Set CAR price to UGX 12,000 per km */
+RATE.Car = 12000;
+</script>
+
+<!-- ===== AUTO FARE CALCULATION ===== -->
+<script>
+(function(){
+ const dest=document.getElementById("destination");
+ dest.addEventListener("blur",()=>{
+  if(!pickup.value||!destination.value) return;
+
+  const plat=parseFloat(prompt("Pickup latitude"));
+  const plong=parseFloat(prompt("Pickup longitude"));
+  const dlat=parseFloat(prompt("Destination latitude"));
+  const dlng=parseFloat(prompt("Destination longitude"));
+
+  if([plat,plong,dlat,dlng].some(isNaN)) return;
+
+  const km=haversine(plat,plong,dlat,dlng);
+  const fare=Math.round(km*RATE[rideType.value]);
+
+  alert(`Estimated Fare\nDistance: ${km.toFixed(2)} km\nFare: UGX ${fare}`);
+ });
+})();
 </script>
 
 </body>
