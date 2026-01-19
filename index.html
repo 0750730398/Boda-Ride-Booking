@@ -13,9 +13,8 @@ nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #
 .container { max-width: 600px; margin: auto; padding: 20px; }
 .card { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
 input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #d1d5db; }
-button.submit, button.action { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #0f766e; color: white; font-weight: bold; cursor: pointer; }
+button.submit { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #0f766e; color: white; font-weight: bold; cursor: pointer; }
 .booking { background: #f3f4f6; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
-hr { margin: 20px 0; }
 </style>
 </head>
 
@@ -28,7 +27,6 @@ hr { margin: 20px 0; }
 
 <nav>
 <button onclick="showSection('book')">Book Ride</button>
-<button onclick="showSection('riderLogin')">Riders</button>
 <button onclick="openAdmin()">Admin</button>
 </nav>
 
@@ -37,26 +35,18 @@ hr { margin: 20px 0; }
 <div id="book" class="card section">
 <h2>Book a Ride</h2>
 <input id="custName" placeholder="Your Name">
-<input id="custPhone" placeholder="Phone Number (2567xxxxxxx)">
+<input id="custPhone" placeholder="Phone Number">
 <input id="pickup" placeholder="Pickup Location">
 <input id="destination" placeholder="Destination">
+
 <select id="rideType">
 <option value="Motorcycle">Motorcycle</option>
 <option value="Car">Car</option>
 </select>
+
 <select id="time"></select>
+
 <button class="submit" onclick="bookRide()">Submit Booking</button>
-</div>
-
-<div id="riderLogin" class="card section" style="display:none;">
-<h2>Rider / Admin Login</h2>
-<input id="loginInput" placeholder="Plate or Admin PIN">
-<button class="submit" onclick="riderOrAdminLogin()">Login</button>
-</div>
-
-<div id="rider" class="card section" style="display:none;">
-<h2>Rider Dashboard</h2>
-<div id="riderBookings"></div>
 </div>
 
 <div id="admin" class="card section" style="display:none;">
@@ -67,14 +57,27 @@ hr { margin: 20px 0; }
 </div>
 
 <script>
-/* ================== CORE APP CODE (UNCHANGED) ================== */
-const ADMIN_PIN="1234";
-const RATE={ Motorcycle:1500, Car:3000 };
-let currentRider=null;
+/* ================= CONFIG ================= */
+const ADMIN_PIN = "1234";
+const RATE = { Motorcycle:1500, Car:12000 };
 
-const getBookings=()=>JSON.parse(localStorage.getItem("bookings")||"[]");
-const saveBookings=b=>localStorage.setItem("bookings",JSON.stringify(b));
+/* ================= STORAGE ================= */
+const getBookings = () => JSON.parse(localStorage.getItem("bookings") || "[]");
+const saveBookings = b => localStorage.setItem("bookings", JSON.stringify(b));
 
+const getRiders = () => JSON.parse(localStorage.getItem("riders") || "[]");
+const saveRiders = r => localStorage.setItem("riders", JSON.stringify(r));
+
+/* ================= SAMPLE RIDERS ================= */
+if(getRiders().length === 0){
+ saveRiders([
+  { plate:"UBK123A", type:"Motorcycle", lat:0.4436, lng:33.2043, available:true },
+  { plate:"UBM456C", type:"Motorcycle", lat:0.4501, lng:33.1902, available:true },
+  { plate:"UAE777K", type:"Car",        lat:0.4300, lng:33.2100, available:true }
+ ]);
+}
+
+/* ================= UI ================= */
 function showSection(id){
  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
  document.getElementById(id).style.display="block";
@@ -82,14 +85,11 @@ function showSection(id){
 }
 
 function openAdmin(){
- if(prompt("Enter Admin PIN")===ADMIN_PIN) showSection("admin");
+ if(prompt("Enter Admin PIN") === ADMIN_PIN) showSection("admin");
  else alert("Wrong PIN");
 }
 
-function riderOrAdminLogin(){
- if(loginInput.value===ADMIN_PIN) showSection("admin");
-}
-
+/* ================= GEO ================= */
 function haversine(lat1,lon1,lat2,lon2){
  const R=6371;
  const dLat=(lat2-lat1)*Math.PI/180;
@@ -100,31 +100,114 @@ function haversine(lat1,lon1,lat2,lon2){
  return R*2*Math.atan2(Math.sqrt(1-a),Math.sqrt(a));
 }
 
-function bookRide(){
- const b=getBookings();
- b.push({
-  id:Date.now(),
-  customer:custName.value,
-  phone:custPhone.value,
-  pickup:pickup.value,
-  destination:destination.value,
-  type:rideType.value,
-  time:time.value,
-  status:"Pending"
+/* ================= NEAREST RIDER ================= */
+function findNearestRider(pLat,pLng,type){
+ const riders = getRiders().filter(r=>r.available && r.type===type);
+ if(!riders.length) return null;
+
+ let nearest=riders[0];
+ let min=haversine(pLat,pLng,nearest.lat,nearest.lng);
+
+ riders.forEach(r=>{
+  const d=haversine(pLat,pLng,r.lat,r.lng);
+  if(d<min){ min=d; nearest=r; }
  });
- saveBookings(b);
- alert("Booking received");
+ return nearest;
 }
 
+/* ================= GPS HELPER (NEW) ================= */
+function getCurrentLocation(callback){
+ if(!navigator.geolocation){
+  callback(null);
+  return;
+ }
+
+ navigator.geolocation.getCurrentPosition(
+  pos=>{
+   callback({
+    lat: pos.coords.latitude,
+    lng: pos.coords.longitude
+   });
+  },
+  ()=>{
+   callback(null);
+  },
+  { enableHighAccuracy:true, timeout:10000 }
+ );
+}
+
+/* ================= BOOKING ================= */
+function bookRide(){
+
+ getCurrentLocation(clientLoc=>{
+
+  let plat, plong;
+
+  if(clientLoc){
+   plat = clientLoc.lat;
+   plong = clientLoc.lng;
+  } else {
+   plat = parseFloat(prompt("Pickup latitude"));
+   plong = parseFloat(prompt("Pickup longitude"));
+  }
+
+  let dlat = parseFloat(prompt("Destination latitude"));
+  let dlng = parseFloat(prompt("Destination longitude"));
+
+  if([plat,plong,dlat,dlng].some(isNaN)){
+   alert("Coordinates required");
+   return;
+  }
+
+  const km = haversine(plat,plong,dlat,dlng);
+  const fare = Math.round(km * RATE[rideType.value]);
+
+  const rider = findNearestRider(plat,plong,rideType.value);
+  if(!rider){
+   alert("No available rider nearby");
+   return;
+  }
+
+  const bookings = getBookings();
+  bookings.push({
+   id: Date.now(),
+   customer: custName.value,
+   phone: custPhone.value,
+   pickup: pickup.value,
+   destination: destination.value,
+   type: rideType.value,
+   time: time.value,
+   distance: km.toFixed(2),
+   fare,
+   rider: rider.plate,
+   status: "Assigned"
+  });
+  saveBookings(bookings);
+
+  const riders = getRiders().map(r =>
+   r.plate === rider.plate ? {...r, available:false} : r
+  );
+  saveRiders(riders);
+
+  alert(`Rider ${rider.plate} assigned\nDistance: ${km.toFixed(2)} km\nFare: UGX ${fare}`);
+ });
+}
+
+/* ================= ADMIN ================= */
 function loadAdmin(){
- bookingList.innerHTML=getBookings().map(b=>`
- <div class="booking">
- <b>${b.customer}</b> (${b.type})<br>
- ${b.pickup} → ${b.destination}<br>
- Fare: ${b.fare || "—"}
- </div>`).join("");
+ bookingList.innerHTML = getBookings().map(b=>`
+  <div class="booking">
+   <b>${b.customer}</b> (${b.type})<br>
+   ${b.pickup} → ${b.destination}<br>
+   Distance: ${b.distance} km<br>
+   Fare: UGX ${b.fare}<br>
+   Rider: <b>${b.rider}</b><br>
+   Status: ${b.status}
+  </div>
+ `).join("");
 }
 
+/* ================= TIME OPTIONS ================= */
 const baseTimes=["Now","In 15 minutes","In 30 minutes"];
 const carTimes=["In 2 hours","In 4 hours","In 1 day"];
 function updateTimeOptions(){
@@ -135,33 +218,6 @@ function updateTimeOptions(){
 rideType.addEventListener("change",updateTimeOptions);
 updateTimeOptions();
 showSection("book");
-</script>
-
-<!-- ===== PRICE OVERRIDE ONLY (REQUESTED) ===== -->
-<script>
-RATE.Car = 12000;
-</script>
-
-<!-- ===== AUTO FARE CALCULATION (NO GOOGLE MAPS) ===== -->
-<script>
-(function(){
- const dest=document.getElementById("destination");
- dest.addEventListener("blur",()=>{
-  if(!pickup.value||!destination.value) return;
-
-  const plat=parseFloat(prompt("Pickup latitude"));
-  const plong=parseFloat(prompt("Pickup longitude"));
-  const dlat=parseFloat(prompt("Destination latitude"));
-  const dlng=parseFloat(prompt("Destination longitude"));
-
-  if([plat,plong,dlat,dlng].some(isNaN)) return;
-
-  const km=haversine(plat,plong,dlat,dlng);
-  const fare=Math.round(km*RATE[rideType.value]);
-
-  alert(`Estimated Fare\nDistance: ${km.toFixed(2)} km\nFare: UGX ${fare}`);
- });
-})();
 </script>
 
 </body>
