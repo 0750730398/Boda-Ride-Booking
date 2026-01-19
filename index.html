@@ -152,4 +152,67 @@ function addRider(){
   type:rType.value
  });
  saveRiders(r);
- r
+ rPlate.value=rPhone.value="";
+ loadRiders();
+}
+
+function loadRiders(){
+ riderList.innerHTML=getRiders().map(r=>`
+ <div class="rider">
+ ${r.plate} (${r.type})<br>
+ ${r.phone}
+ </div>`).join("");
+}
+
+function loadAdmin(){
+ bookingList.innerHTML=getBookings().map(b=>`
+ <div class="booking">
+ <b>${b.customer}</b> (${b.type})<br>
+ ${b.pickup} → ${b.destination}<br>
+ Fare: ${b.fare || "—"}
+ </div>`).join("");
+}
+
+function loadRiderBookings(){
+ riderBookings.innerHTML=getBookings()
+ .filter(b=>b.type===currentRider.type)
+ .map(b=>`
+ <div class="booking">
+ ${b.pickup} → ${b.destination}<br>
+ Status: ${b.status}
+ </div>`).join("");
+}
+
+const baseTimes=["Now","In 15 minutes","In 30 minutes"];
+const carTimes=["In 2 hours","In 4 hours","In 1 day"];
+function updateTimeOptions(){
+ time.innerHTML="";
+ baseTimes.forEach(t=>time.add(new Option(t,t)));
+ if(rideType.value==="Car") carTimes.forEach(t=>time.add(new Option(t,t)));
+}
+rideType.addEventListener("change",updateTimeOptions);
+updateTimeOptions();
+showSection("book");
+</script>
+
+<!-- AUTO FARE (MANUAL COORDINATES, NO MAPS) -->
+<script>
+destination.addEventListener("blur",()=>{
+ if(!pickup.value||!destination.value) return;
+
+ const plat=parseFloat(prompt("Pickup latitude"));
+ const plong=parseFloat(prompt("Pickup longitude"));
+ const dlat=parseFloat(prompt("Destination latitude"));
+ const dlng=parseFloat(prompt("Destination longitude"));
+
+ if([plat,plong,dlat,dlng].some(isNaN)) return;
+
+ const km=haversine(plat,plong,dlat,dlng);
+ const fare=Math.round(km*RATE[rideType.value]);
+
+ alert(`Estimated Fare\nDistance: ${km.toFixed(2)} km\nFare: UGX ${fare}`);
+});
+</script>
+
+</body>
+</html>
