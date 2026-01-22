@@ -3,200 +3,254 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jinja Boda B Booking & Car Hire</title>
+<title>Jinja Boda B</title>
 
 <style>
-body { font-family: "Segoe UI", sans-serif; background: #f9fafb; margin: 0; }
-header { background: linear-gradient(135deg, #0f766e, #14b8a6); color: white; text-align: center; padding: 20px; }
-nav { display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
-nav button { padding: 10px 15px; border: none; border-radius: 8px; background: #0f766e; color: white; cursor: pointer; }
-.container { max-width: 600px; margin: auto; padding: 20px; }
-.card { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
-input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #d1d5db; }
-button.submit { width: 100%; padding: 12px; border: none; border-radius: 12px; background: #0f766e; color: white; font-weight: bold; cursor: pointer; }
-.booking { background: #f3f4f6; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+:root{
+--green:#00C853;
+--dark:#1b1b1b;
+--light:#f5f7f6;
+}
+body{
+font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+background:var(--light);
+margin:0;
+}
+header{
+background:var(--green);
+color:#fff;
+padding:20px;
+text-align:center;
+}
+nav{
+display:flex;
+justify-content:space-around;
+background:#fff;
+position:sticky;
+top:0;
+z-index:10;
+border-bottom:1px solid #eee;
+}
+nav button{
+background:none;
+border:none;
+padding:15px;
+font-weight:600;
+color:var(--dark);
+}
+.container{
+max-width:420px;
+margin:auto;
+padding:15px;
+}
+.card{
+background:#fff;
+border-radius:16px;
+padding:16px;
+margin-bottom:15px;
+box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+input,select,textarea{
+width:100%;
+padding:14px;
+border-radius:12px;
+border:1px solid #ddd;
+margin-bottom:10px;
+}
+button.primary{
+background:var(--green);
+color:#fff;
+border:none;
+padding:14px;
+width:100%;
+border-radius:14px;
+font-size:16px;
+font-weight:700;
+}
+.status{
+display:inline-block;
+padding:4px 10px;
+border-radius:20px;
+font-size:12px;
+font-weight:600;
+}
+.Pending{background:#ffe082}
+.Assigned{background:#b3e5fc}
+.Completed{background:#c8e6c9}
+.rating{color:#ffb300;font-size:14px}
+.trip{
+border-bottom:1px solid #eee;
+padding:10px 0;
+}
+small{color:#666}
 </style>
 </head>
 
 <body>
 
 <header>
-<h1>Jinja Boda B Booking & Special Car Hire</h1>
-<p>Ride Safe • Arrive on Time • Support Local Riders</p>
+<h2>Jinja Boda B</h2>
+<p>Fast • Safe • Reliable</p>
 </header>
 
 <nav>
-<button onclick="showSection('book')">Book Ride</button>
-<button onclick="openAdmin()">Admin</button>
+<button onclick="show('book')">Home</button>
+<button onclick="show('customerLogin')">My Trips</button>
+<button onclick="show('riderLogin')">Rider</button>
+<button onclick="adminLogin()">Admin</button>
 </nav>
 
 <div class="container">
 
+<!-- BOOK -->
 <div id="book" class="card section">
-<h2>Book a Ride</h2>
-<input id="custName" placeholder="Your Name">
-<input id="custPhone" placeholder="Phone Number">
-<input id="pickup" placeholder="Pickup Location (text)">
-<input id="destination" placeholder="Destination (text)">
-
+<h3>Request a Ride</h3>
+<input id="custName" placeholder="Your name">
+<input id="custPhone" placeholder="Phone number">
+<input id="pickup" placeholder="Pickup location">
+<input id="destination" placeholder="Where to?">
 <select id="rideType">
-<option value="Motorcycle">Motorcycle</option>
-<option value="Car">Car</option>
+<option>Motorcycle</option>
+<option>Car</option>
 </select>
-
 <select id="time"></select>
-
-<button class="submit" onclick="bookRide()">Submit Booking</button>
+<button class="primary" onclick="bookRide()">Request Ride</button>
 </div>
 
-<div id="admin" class="card section" style="display:none;">
-<h2>Admin Dashboard</h2>
-<div id="bookingList"></div>
+<!-- CUSTOMER LOGIN -->
+<div id="customerLogin" class="card section" style="display:none">
+<h3>Login</h3>
+<input id="custLoginPhone" placeholder="Phone number">
+<button class="primary" onclick="sendOTP()">Continue</button>
+<div id="otpBox" style="display:none">
+<input id="otpInput" placeholder="Enter OTP">
+<button class="primary" onclick="verifyOTP()">Verify</button>
+</div>
+</div>
+
+<!-- CUSTOMER DASH -->
+<div id="customerTrack" class="section" style="display:none">
+<h4>My Trips</h4>
+<div id="customerTrips"></div>
+</div>
+
+<!-- RIDER LOGIN -->
+<div id="riderLogin" class="card section" style="display:none">
+<h3>Rider Login</h3>
+<input id="loginInput" placeholder="Bike / Car plate">
+<button class="primary" onclick="riderLogin()">Login</button>
+</div>
+
+<!-- RIDER -->
+<div id="rider" class="section" style="display:none">
+<div class="card">
+<h3>Rider Status</h3>
+<button id="availabilityBtn" class="primary" onclick="toggleAvailability()">Go Online</button>
+<div id="riderRatings"></div>
+</div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="section" style="display:none">
+<div class="card">
+<h3>Admin</h3>
+<button class="primary" onclick="autoAssign()">Auto Assign</button>
+<div id="adminRatings"></div>
+</div>
 </div>
 
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const ADMIN_PIN = "1234";
+const ADMIN_PIN="1234";
+const RATE={Motorcycle:1500,Car:3000};
+let generatedOTP=null,loggedCustomerPhone=null,currentRider=null;
 
-/* Fixed fares (no distance) */
-const FIXED_FARE = {
- Motorcycle: 5000,
- Car: 20000
-};
+const riders=()=>JSON.parse(localStorage.getItem("riders")||"[]");
+const bookings=()=>JSON.parse(localStorage.getItem("bookings")||"[]");
+const saveRiders=r=>localStorage.setItem("riders",JSON.stringify(r));
+const saveBookings=b=>localStorage.setItem("bookings",JSON.stringify(b));
 
-/* ================= STORAGE ================= */
-const getBookings = () => JSON.parse(localStorage.getItem("bookings") || "[]");
-const saveBookings = b => localStorage.setItem("bookings", JSON.stringify(b));
-
-const getRiders = () => JSON.parse(localStorage.getItem("riders") || "[]");
-const saveRiders = r => localStorage.setItem("riders", JSON.stringify(r));
-
-/* ================= SAMPLE RIDERS (GPS STORED) ================= */
-if(getRiders().length === 0){
- saveRiders([
-  { plate:"UBK123A", type:"Motorcycle", lat:0.4436, lng:33.2043, available:true },
-  { plate:"UBM456C", type:"Motorcycle", lat:0.4501, lng:33.1902, available:true },
-  { plate:"UAE777K", type:"Car",        lat:0.4300, lng:33.2100, available:true }
- ]);
+function show(id){
+document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+document.getElementById(id).style.display="block";
 }
 
-/* ================= UI ================= */
-function showSection(id){
- document.querySelectorAll(".section").forEach(s=>s.style.display="none");
- document.getElementById(id).style.display="block";
- if(id==="admin") loadAdmin();
+/* OTP */
+function sendOTP(){
+generatedOTP=Math.floor(1000+Math.random()*9000);
+alert("OTP (demo): "+generatedOTP);
+otpBox.style.display="block";
+}
+function verifyOTP(){
+if(otpInput.value==generatedOTP){
+loggedCustomerPhone=custLoginPhone.value;
+show("customerTrack");
+loadCustomer();
+}
 }
 
-function openAdmin(){
- if(prompt("Enter Admin PIN") === ADMIN_PIN) showSection("admin");
- else alert("Wrong PIN");
-}
-
-/* ================= GEO ================= */
-function haversine(lat1,lon1,lat2,lon2){
- const R=6371;
- const dLat=(lat2-lat1)*Math.PI/180;
- const dLon=(lon2-lon1)*Math.PI/180;
- const a=Math.sin(dLat/2)**2+
- Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
- Math.sin(dLon/2)**2;
- return R*2*Math.atan2(Math.sqrt(1-a),Math.sqrt(a));
-}
-
-/* ================= NEAREST RIDER ================= */
-function findNearestRider(pLat,pLng,type){
- const riders=getRiders().filter(r=>r.available && r.type===type);
- if(!riders.length) return null;
-
- let nearest=riders[0];
- let min=haversine(pLat,pLng,nearest.lat,nearest.lng);
-
- riders.forEach(r=>{
-  const d=haversine(pLat,pLng,r.lat,r.lng);
-  if(d<min){ min=d; nearest=r; }
- });
-
- return nearest;
-}
-
-/* ================= GPS PICKUP ================= */
-function getCurrentLocation(callback){
- if(!navigator.geolocation){
-  alert("GPS not supported");
-  return;
- }
-
- navigator.geolocation.getCurrentPosition(
-  pos=>callback(pos.coords.latitude,pos.coords.longitude),
-  ()=>alert("Please enable location"),
-  { enableHighAccuracy:true }
- );
-}
-
-/* ================= BOOKING ================= */
+/* BOOK */
 function bookRide(){
-
- getCurrentLocation((plat,plong)=>{
-
-  const rider=findNearestRider(plat,plong,rideType.value);
-  if(!rider){
-   alert("No available rider nearby");
-   return;
-  }
-
-  const fare = FIXED_FARE[rideType.value];
-
-  const bookings=getBookings();
-  bookings.push({
-   id:Date.now(),
-   customer:custName.value,
-   phone:custPhone.value,
-   pickup:pickup.value,
-   destination:destination.value,
-   type:rideType.value,
-   time:time.value,
-   fare,
-   rider:rider.plate,
-   status:"Assigned"
-  });
-  saveBookings(bookings);
-
-  saveRiders(
-   getRiders().map(r =>
-    r.plate===rider.plate ? {...r,available:false} : r
-   )
-  );
-
-  alert(`Rider ${rider.plate} assigned\nFare: UGX ${fare}`);
- });
+navigator.geolocation.getCurrentPosition(p=>{
+const b=bookings();
+b.push({
+id:Date.now(),
+customer:custName.value,
+phone:custPhone.value,
+pickup:pickup.value,
+destination:destination.value,
+type:rideType.value,
+time:time.value,
+lat:p.coords.latitude,
+lng:p.coords.longitude,
+status:"Pending",
+rating:null,
+date:new Date().toLocaleString()
+});
+saveBookings(b);
+alert("Ride requested");
+});
 }
 
-/* ================= ADMIN ================= */
-function loadAdmin(){
- bookingList.innerHTML=getBookings().map(b=>`
-  <div class="booking">
-   <b>${b.customer}</b> (${b.type})<br>
-   ${b.pickup} → ${b.destination}<br>
-   Fare: UGX ${b.fare}<br>
-   Rider: <b>${b.rider}</b><br>
-   Status: ${b.status}
-  </div>
- `).join("");
+/* CUSTOMER */
+function loadCustomer(){
+const b=bookings().filter(x=>x.phone===loggedCustomerPhone);
+customerTrips.innerHTML=b.map(x=>`
+<div class="card trip">
+<b>${x.pickup}</b> → ${x.destination}<br>
+<small>${x.date}</small><br>
+<span class="status ${x.status}">${x.status}</span><br>
+${x.rating?`<div class="rating">${"★".repeat(x.rating)}</div>`:""}
+</div>
+`).join("");
 }
 
-/* ================= TIME OPTIONS ================= */
-const baseTimes=["Now","In 15 minutes","In 30 minutes"];
-const carTimes=["In 2 hours","In 4 hours","In 1 day"];
-function updateTimeOptions(){
- time.innerHTML="";
- baseTimes.forEach(t=>time.add(new Option(t,t)));
- if(rideType.value==="Car") carTimes.forEach(t=>time.add(new Option(t,t)));
+/* RIDER */
+function riderLogin(){
+const r=riders().find(x=>x.plate===loginInput.value);
+if(!r)return alert("Not registered");
+currentRider=r;
+show("rider");
+loadRider();
 }
-rideType.addEventListener("change",updateTimeOptions);
-updateTimeOptions();
-showSection("book");
+function toggleAvailability(){
+const r=riders();const me=r.find(x=>x.plate===currentRider.plate);
+me.available=!me.available;
+saveRiders(r);
+availabilityBtn.textContent=me.available?"Online":"Go Online";
+}
+function loadRider(){
+const r=riders().find(x=>x.plate===currentRider.plate);
+riderRatings.innerHTML=`⭐ ${r.ratingAvg?.toFixed(1)||"New Rider"} (${r.ratingCount||0})`;
+}
+
+/* ADMIN */
+function adminLogin(){if(prompt("PIN")===ADMIN_PIN)show("admin")}
+function autoAssign(){alert("Auto dispatch simulated")}
+const base=["Now","15 min","30 min"];
+function loadTime(){time.innerHTML="";base.forEach(t=>time.add(new Option(t,t)));}
+loadTime();
 </script>
 
 </body>
